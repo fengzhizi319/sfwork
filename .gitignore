@@ -1,0 +1,40 @@
+# ------------------------------------------------------------------
+# sfwork  orchestration workspace
+# ------------------------------------------------------------------
+# 该仓库只管理 sfwork 自身的编排脚本、文档和配置。
+# 四大子项目通过 scripts/clone-repos.sh 克隆到本地，作为独立的 git 仓库管理。
+# ------------------------------------------------------------------
+
+# 子项目目录（独立仓库，不纳入 sfwork 根仓库）
+/kuscia/
+/secretflow/
+/secretpad/
+/secretpad-frontend/
+
+# Kuscia 本地运行时数据
+/.local-kuscia/
+
+# 运行时日志
+/logs/
+/log/
+
+# 构建产物与 IDE
+*.log
+*.pid
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# 前端/后端/SecretFlow 产生的临时产物（如出现在根目录）
+node_modules/
+target/
+dist/
+build/
+__pycache__/
+*.pyc
+*.whl
+*.tar
+
+# 备份文件
+*.bak

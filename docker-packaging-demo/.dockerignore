@@ -1,0 +1,11 @@
+# 这些文件不会进入 Docker build context，避免镜像变大
+.git
+.gitignore
+README.md
+scripts/
+Makefile
+*.tar
+*.log
+.DS_Store
+__pycache__/
+*.pyc
