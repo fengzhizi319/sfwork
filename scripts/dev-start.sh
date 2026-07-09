@@ -90,17 +90,24 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 # 工具函数库
 # ------------------------------------------------------------------
 
-# command_exists: POSIX 标准方式检测命令是否存在于 PATH
-# 返回：0=存在，1=不存在
+# command_exists
+#   功能：POSIX 标准方式检测命令是否存在于 PATH。
+#   参数：$1 - 待检测的命令名
+#   返回：0=存在，1=不存在
+#   原理：command -v 输出命令路径；>/dev/null 2>&1 丢弃输出，仅保留退出码。
+#   示例：command_exists java
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
-# version_ge: 版本号比较，判断 $1 >= $2
-# 实现原理：
-#   将 $2 和 $1 按行输出（注意顺序：$2 在前），使用 sort -V 按语义化版本排序，
-#   再用 -C 检查是否已排序。若已排序，说明 $1 >= $2。
-# 示例：
-#   version_ge "17.0.11" "17"   -> 返回 0 (true)
-#   version_ge "16.14.0" "17"   -> 返回 1 (false)
+# version_ge
+#   功能：比较两个版本号，判断 $1 >= $2。
+#   参数：$1 - 待检测版本，$2 - 最低要求版本
+#   返回：0=$1 大于等于 $2，否则 1
+#   实现原理：
+#     将 $2 和 $1 按行输出（注意顺序：$2 在前），使用 sort -V 按语义化版本排序，
+#     再用 -C 检查是否已排序。若已排序，说明 $1 >= $2。
+#   示例：
+#     version_ge "17.0.11" "17"   -> 返回 0 (true)
+#     version_ge "16.14.0" "17"   -> 返回 1 (false)
 version_ge() {
     printf '%s\n%s\n' "$2" "$1" | sort -V -C
 }
@@ -116,9 +123,11 @@ get_docker_version() { docker --version 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)
 # ------------------------------------------------------------------
 # 环境检测
 # ------------------------------------------------------------------
-# check_environment: 检测所有必需运行时依赖
-# 检测顺序：Java -> Maven -> Node.js -> pnpm -> Docker -> conda
-# 任一依赖缺失或版本不足都会报错退出
+# check_environment
+#   功能：检测所有必需运行时依赖是否已安装且版本满足要求。
+#   参数：无
+#   退出码：0=全部通过；任一依赖缺失或版本不足则 exit 1
+#   检测顺序：Java -> Maven -> Node.js -> pnpm -> Docker -> conda
 check_environment() {
     log_step "检查本地开发环境 ..."
 
@@ -179,6 +188,8 @@ check_environment() {
 
     # conda 检测：构建 SecretFlow wheel 需要 sf310 环境
     if command_exists conda; then
+        # conda env list 列出所有环境；grep -qE 使用正则匹配行首的环境名。
+        # ^$CONDA_ENV[[:space:]] 确保精确匹配环境名，避免 sf310 误匹配 sf310xxx。
         if conda env list | grep -qE "^$CONDA_ENV[[:space:]]"; then
             log_info "Conda 环境 $CONDA_ENV 已存在"
         else
@@ -195,51 +206,69 @@ check_environment() {
 # 端口检测与管理
 # ------------------------------------------------------------------
 
-# port_in_use: 检测指定 TCP 端口是否正在监听
-# 使用 ss -tln（比 netstat 更快，且无需 root 即可查看本机监听端口）
-# 正则 \\b 用于精确匹配端口号，避免 8080 误匹配 18080
+# port_in_use
+#   功能：检测指定 TCP 端口是否正在监听。
+#   参数：$1 - 端口号
+#   返回：0=已被占用，1=未被占用
+#   原理：使用 ss -tln（比 netstat 更快，且无需 root 即可查看本机监听端口）
+#   正则 \\b 用于精确匹配端口号，避免 8080 误匹配 18080。
 port_in_use() {
     local port="$1"
     ss -tln 2>/dev/null | grep -qE ":$port\\b"
 }
 
-# port_pid: 获取占用指定端口的进程 ID
-# 实现：从 ss -tlnp 的输出中提取 pid=数字
+# port_pid
+#   功能：获取占用指定端口的进程 ID。
+#   参数：$1 - 端口号
+#   输出：进程 ID（仅输出第一个匹配的 pid）
+#   原理：从 ss -tlnp 的输出中提取 pid=数字。
 port_pid() {
     local port="$1"
     ss -tlnp 2>/dev/null | grep -E ":$port\\b" | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2
 }
 
-# read_pidfile: 读取 PID 文件内容
-# 用于判断端口占用是否来自本脚本之前启动的进程，避免误杀其他服务
+# read_pidfile
+#   功能：读取 PID 文件内容。
+#   参数：$1 - PID 文件路径
+#   输出：文件内容（PID）或空字符串
+#   用途：用于判断端口占用是否来自本脚本之前启动的进程，避免误杀其他服务。
 read_pidfile() {
     local f="$1"
     if [ -f "$f" ]; then cat "$f"; fi
 }
 
-# wait_for_port: 轮询等待指定端口就绪
-# 参数：$1=host, $2=port, $3=超时秒数（默认 60）, $4=服务名称
-# 优势：服务就绪后立即返回，比固定 sleep 更智能
+# wait_for_port
+#   功能：轮询等待指定端口就绪。
+#   参数：
+#     $1 - 主机名或 IP
+#     $2 - 端口号
+#     $3 - 超时秒数（默认 60）
+#     $4 - 服务名称（用于日志）
+#   返回：0=在超时前端口就绪，1=超时未就绪
+#   优势：服务就绪后立即返回，比固定 sleep 更智能。
 wait_for_port() {
     local host="$1" port="$2" timeout_sec="${3:-60}" what="$4"
     log_info "等待 $what 就绪：$host:$port（最多 ${timeout_sec}s）..."
+    # C 语言风格 for 循环，从 0 计数到 timeout_sec-1
     for ((i = 0; i < timeout_sec; i++)); do
         if ss -tln 2>/dev/null | grep -qE ":$port\\b"; then
             log_info "$what 已就绪"
             return 0
         fi
+        # 每次轮询间隔 1 秒，避免 CPU 空转
         sleep 1
     done
     log_error "$what 在 $host:$port 上未就绪，请查看日志"
     return 1
 }
 
-# check_required_ports: 检查关键端口占用情况
-# 规则：
-#   - 8080/8443 只能由本脚本启动的后端进程占用
-#   - 8000 只能由本脚本启动的前端进程占用
-#   - 18080/18082/18083/13081 仅在 Kuscia 未运行时被占用才报错
-# 若检测到冲突，提示用户先执行 dev-stop.sh 清理
+# check_required_ports
+#   功能：检查关键端口占用情况，确保能正常启动各服务。
+#   规则：
+#     - 8080/8443 只能由本脚本启动的后端进程占用
+#     - 8000 只能由本脚本启动的前端进程占用
+#     - 18080/18082/18083/13081 仅在 Kuscia 未运行时被占用才报错
+#   退出码：0=端口检查通过；1=发现冲突端口
 check_required_ports() {
     log_step "检查关键端口占用情况 ..."
     local backend_pid frontend_pid
@@ -248,6 +277,8 @@ check_required_ports() {
 
     # 判断 Kuscia master 容器是否已在运行
     local kuscia_running=false
+    # docker ps --filter 按容器名过滤；--format 仅输出 Names 字段。
+    # grep -q . 判断是否有任何输出（即容器存在且运行中）。
     if docker ps --filter "name=${USER}-kuscia-master" --format '{{.Names}}' | grep -q .; then
         kuscia_running=true
     fi
@@ -259,6 +290,7 @@ check_required_ports() {
         if port_in_use "$p"; then
             local pid
             pid="$(port_pid "$p")"
+            # 如果占用的 PID 与 PID 文件一致，说明是本脚本之前启动的残留进程，不算冲突
             if [ -n "$backend_pid" ] && [ "$pid" = "$backend_pid" ]; then
                 log_info "端口 $p 已由当前后端进程占用"
             else
@@ -292,6 +324,7 @@ check_required_ports() {
         log_info "Kuscia 已在运行，其端口占用符合预期"
     fi
 
+    # 若发现任何冲突，给出清理提示并退出
     if [ "$abort" = true ]; then
         log_error "请先释放占用端口，或执行 bash scripts/dev-stop.sh 清理残留进程"
         exit 1
@@ -302,19 +335,26 @@ check_required_ports() {
 # 进程管理工具函数
 # ------------------------------------------------------------------
 
-# is_process_alive: 检测进程是否存活
-# 使用 ps -p 而非 kill -0，避免对没有权限的进程误判断
+# is_process_alive
+#   功能：检测进程是否存活。
+#   参数：$1 - 进程 ID
+#   返回：0=存活，1=不存在或无权限
+#   说明：使用 ps -p 而非 kill -0，避免对没有权限的进程误判断。
 is_process_alive() {
     local pid="$1"
     [ -n "$pid" ] && ps -p "$pid" >/dev/null 2>&1
 }
 
-# stop_service_by_pidfile: 根据 PID 文件优雅停止服务
-# 停止策略：
-#   1. 发送 SIGTERM（允许进程清理资源）
-#   2. 等待 1 秒
-#   3. 若仍在运行，发送 SIGKILL 强制终止
-#   4. 删除 PID 文件
+# stop_service_by_pidfile
+#   功能：根据 PID 文件优雅停止服务。
+#   参数：
+#     $1 - PID 文件路径
+#     $2 - 服务名称（用于日志）
+#   停止策略：
+#     1. 发送 SIGTERM（允许进程清理资源）
+#     2. 等待 1 秒
+#     3. 若仍在运行，发送 SIGKILL 强制终止
+#     4. 删除 PID 文件
 stop_service_by_pidfile() {
     local pidfile="$1" name="$2"
     if [ -f "$pidfile" ]; then
@@ -322,12 +362,15 @@ stop_service_by_pidfile() {
         pid="$(cat "$pidfile")"
         if is_process_alive "$pid"; then
             log_info "停止已运行的 $name（pid $pid）..."
+            # kill 默认发送 SIGTERM（信号 15），允许进程优雅退出
             kill "$pid" 2>/dev/null || true
             sleep 1
             if is_process_alive "$pid"; then
+                # SIGKILL（信号 9）强制终止，进程无法忽略
                 kill -9 "$pid" 2>/dev/null || true
             fi
         fi
+        # 删除 PID 文件，防止后续将旧 PID 误判为当前服务
         rm -f "$pidfile"
     fi
 }
@@ -335,17 +378,16 @@ stop_service_by_pidfile() {
 # ------------------------------------------------------------------
 # 自定义 SecretFlow 镜像构建
 # ------------------------------------------------------------------
-# build_secretflow_image: 基于 secretflow/docker/privacy-dev/Dockerfile
-# 构建包含本地 privacy/l_diversity 组件的 SecretFlow 镜像
-#
-# 构建流程：
-#   1. 激活 conda 环境 sf310
-#   2. 清理历史构建产物
-#   3. 使用 python -m build --wheel 构建 wheel
-#   4. 将 wheel 复制到 docker/privacy-dev/ 构建上下文
-#   5. docker build 生成镜像
-#
-# 如果镜像已存在，则跳过构建，避免重复耗时
+# build_secretflow_image
+#   功能：基于 secretflow/docker/privacy-dev/Dockerfile
+#         构建包含本地 privacy/l_diversity 等组件的 SecretFlow 镜像。
+#   构建流程：
+#     1. 激活 conda 环境 sf310
+#     2. 清理历史构建产物
+#     3. 使用 python -m build --wheel 构建 wheel
+#     4. 将 wheel 复制到 docker/privacy-dev/ 构建上下文
+#     5. docker build 生成镜像
+#   说明：如果镜像已存在，则跳过构建，避免重复耗时。
 build_secretflow_image() {
     log_step "构建二次开发 SecretFlow 镜像：$PRIVACY_IMAGE ..."
 
@@ -401,18 +443,21 @@ build_secretflow_image() {
 # 启动顺序（依赖关系）：
 #   生成证书 -> 编译后端 -> 构建镜像 -> 启动 Kuscia -> 启动后端 -> 启动前端
 
-# generate_certs: 生成 KusciaAPI 客户端证书与后端 HTTPS 所需的 JKS 密钥库
-# 调用 secretpad 自带的测试证书生成脚本
-# 产物：config/certs/、config/server.jks
+# generate_certs
+#   功能：生成 KusciaAPI 客户端证书与后端 HTTPS 所需的 JKS 密钥库。
+#   说明：调用 secretpad 自带的测试证书生成脚本。
+#   产物：config/certs/、config/server.jks
 generate_certs() {
     log_step "生成 KusciaAPI 证书与后端 JKS ..."
     cd "$SECRETPAD_DIR"
     bash scripts/test/setup.sh
 }
 
-# build_backend: 使用 Maven 编译 SecretPad 后端，生成可执行 fat jar
-# 使用 install 而非 package，便于子模块间依赖解析
-# -Dmaven.test.skip=true: 跳过测试，加速本地构建
+# build_backend
+#   功能：使用 Maven 编译 SecretPad 后端，生成可执行 fat jar。
+#   说明：
+#     - 使用 install 而非 package，便于子模块间依赖解析
+#     - -Dmaven.test.skip=true: 跳过测试，加速本地构建
 build_backend() {
     log_step "编译 SecretPad 后端 ..."
     cd "$SECRETPAD_DIR"
@@ -424,22 +469,28 @@ build_backend() {
     log_info "后端编译完成"
 }
 
-# reset_kuscia: 删除已有的 Kuscia 容器及数据目录，强制下一次重新部署
-# 适用场景：自定义 SecretFlow 镜像更新后，Kuscia 中注册的 AppImage 仍指向旧镜像
+# reset_kuscia
+#   功能：删除已有的 Kuscia 容器及数据目录，强制下一次重新部署。
+#   适用场景：自定义 SecretFlow 镜像更新后，Kuscia 中注册的 AppImage 仍指向旧镜像。
 reset_kuscia() {
     log_step "重置 Kuscia 环境 ..."
+    # 数组：需要删除的容器名。${USER} 展开为当前用户名，与 install-kuscia-only.sh 命名保持一致。
     local containers=(
         "${USER}-kuscia-master"
         "${USER}-kuscia-lite-alice"
         "${USER}-kuscia-lite-bob"
     )
+    # for ... in 遍历数组；${containers[@]} 展开为数组元素列表。
     for ctr in "${containers[@]}"; do
+        # 精确匹配容器名：^/${ctr}$ 防止误匹配前缀相同的容器
         if docker ps -a --filter "name=^/${ctr}$" --format '{{.Names}}' | grep -q .; then
             log_info "删除现有 Kuscia 容器：$ctr"
+            # >/dev/null 2>&1 隐藏输出；|| true 保证即使删除失败也不中断脚本
             docker rm -f "$ctr" >/dev/null 2>&1 || true
         fi
     done
 
+    # INSTALL_DIR 由 install-kuscia-only.sh 默认写入 $HOME/kuscia，允许通过环境变量覆盖。
     local kuscia_install_dir="${INSTALL_DIR:-$HOME/kuscia}"
     if [ -d "$kuscia_install_dir" ]; then
         log_warn "删除 Kuscia 数据目录：$kuscia_install_dir"
@@ -456,15 +507,15 @@ reset_kuscia() {
     log_info "Kuscia 环境已重置，下次启动将重新部署"
 }
 
-# start_kuscia: 部署 Kuscia 容器环境（master + alice + bob）
-# 关键：
-#   1. 通过 SECRETFLOW_IMAGE 环境变量将自定义镜像透传给 install-kuscia-only.sh
-#   2. install-kuscia-only.sh 会负责拉取/加载镜像、启动容器、注册 AppImage
-#   3. Kuscia 代码未更新，因此 KUSCIA_IMAGE 保持官方镜像默认值
-#
-# 等待端口：
-#   - 18083: Kuscia API gRPC（SecretPad 后端连接）
-#   - 13081: Kuscia Envoy 内部端口（数据面通信）
+# start_kuscia
+#   功能：部署 Kuscia 容器环境（master + alice + bob）。
+#   关键：
+#     1. 通过 SECRETFLOW_IMAGE 环境变量将自定义镜像透传给 install-kuscia-only.sh
+#     2. install-kuscia-only.sh 会负责拉取/加载镜像、启动容器、注册 AppImage
+#     3. Kuscia 代码未更新，因此 KUSCIA_IMAGE 保持官方镜像默认值
+#   等待端口：
+#     - 18083: Kuscia API gRPC（SecretPad 后端连接）
+#     - 13081: Kuscia Envoy 内部端口（数据面通信）
 start_kuscia() {
     log_step "检查 Kuscia Docker 环境 ..."
 
@@ -479,6 +530,7 @@ start_kuscia() {
         # 关键：通过环境变量指定二次开发镜像，install-kuscia-only.sh 已支持覆盖
         export SECRETFLOW_IMAGE="$PRIVACY_IMAGE"
         # Kuscia 代码本次未更新，继续使用官方 Kuscia 镜像即可
+        # -P notls：本地开发关闭 TLS，简化证书配置
         bash scripts/install-kuscia-only.sh master -P notls
     fi
 
@@ -487,16 +539,21 @@ start_kuscia() {
     wait_for_port 127.0.0.1 13081 180 "Kuscia Envoy 内部端口"
 }
 
-# import_custom_image_to_lite: 将自定义 SecretFlow 镜像导入指定 Kuscia Lite 节点
-# 说明：
-#   - Kuscia 使用自己的容器镜像存储，宿主机 Docker 中的本地镜像不会自动对 Kuscia 可见。
-#   - install-kuscia-only.sh 在全新部署时会导入镜像，但“启动已有容器”模式下不会重新导入，
-#     这会导致任务 Pod 出现 ErrImagePull/ImagePullBackOff 而一直挂起。
-#   - 本函数通过 stdin 直接加载镜像，避免 register_app_image_0.sh 因 images 目录权限问题失败。
+# import_custom_image_to_lite
+#   功能：将自定义 SecretFlow 镜像导入指定 Kuscia Lite 节点。
+#   参数：$1 - 节点名，例如 alice 或 bob
+#   返回：0=成功或无需导入，1=导入失败
+#   说明：
+#     - Kuscia 使用自己的容器镜像存储，宿主机 Docker 中的本地镜像不会自动对 Kuscia 可见。
+#     - install-kuscia-only.sh 在全新部署时会导入镜像，但“启动已有容器”模式下不会重新导入，
+#       这会导致任务 Pod 出现 ErrImagePull/ImagePullBackOff 而一直挂起。
+#     - 本函数通过 stdin 直接加载镜像，避免 register_app_image_0.sh 因 images 目录权限问题失败。
 import_custom_image_to_lite() {
     local node="$1"
     local ctr="${USER}-kuscia-lite-${node}"
+    # 去掉可能的 docker.io/ 前缀，方便与 kuscia image list 输出比对
     local image_short="${PRIVACY_IMAGE#docker.io/}"
+    # 从 tag 中分离镜像名和标签
     local image_name="${image_short%:*}"
     local image_tag="${image_short#*:}"
 
@@ -510,17 +567,21 @@ import_custom_image_to_lite() {
             | grep -qF "${image_tag}"
     }
 
+    # 如果 Lite 节点容器未运行，则跳过导入
     if ! docker ps --filter "name=^/${ctr}$" --format '{{.Names}}' | grep -q .; then
         log_warn "Kuscia lite ${node} 未运行，跳过镜像导入"
         return 0
     fi
 
+    # 如果镜像已存在于 Kuscia 内部镜像仓库，则无需重复导入
     if image_exists_in_kuscia; then
         log_info "自定义镜像已在 ${node} 节点存在，跳过导入"
         return 0
     fi
 
     log_step "导入自定义镜像到 Kuscia ${node} 节点 ..."
+    # docker save 将镜像导出为 tar 流，通过管道直接送入 docker exec -i 的 stdin，
+    # 再由 kuscia image load 加载到 Kuscia 私有镜像存储。
     docker save "${PRIVACY_IMAGE}" | docker exec -i "${ctr}" kuscia image load
     if image_exists_in_kuscia; then
         log_info "自定义镜像已成功导入 ${node} 节点"
@@ -530,19 +591,21 @@ import_custom_image_to_lite() {
     fi
 }
 
-# import_custom_image_to_kuscia: 确保自定义镜像对 Kuscia 各 Lite 节点可用
+# import_custom_image_to_kuscia
+#   功能：确保自定义镜像对 Kuscia 各 Lite 节点可用。
 import_custom_image_to_kuscia() {
     log_step "检查并导入自定义 SecretFlow 镜像到 Kuscia ..."
     import_custom_image_to_lite alice
     import_custom_image_to_lite bob
 }
 
-# start_backend: 启动 SecretPad 后端服务
-# 环境变量说明：
-#   KUSCIA_API_ADDRESS: Kuscia API 地址
-#   KUSCIA_API_PORT: Kuscia API gRPC 端口（install-kuscia-only.sh master 默认映射到宿主机 18083）
-#   KUSCIA_GW_ADDRESS: Kuscia Gateway 地址（Envoy 内部端口映射到宿主机 13081）
-#   KUSCIA_PROTOCOL: notls，本地开发关闭 TLS
+# start_backend
+#   功能：启动 SecretPad 后端服务。
+#   环境变量说明：
+#     KUSCIA_API_ADDRESS: Kuscia API 地址
+#     KUSCIA_API_PORT: Kuscia API gRPC 端口（install-kuscia-only.sh master 默认映射到宿主机 18083）
+#     KUSCIA_GW_ADDRESS: Kuscia Gateway 地址（Envoy 内部端口映射到宿主机 13081）
+#     KUSCIA_PROTOCOL: notls，本地开发关闭 TLS
 start_backend() {
     log_step "启动 SecretPad 后端 ..."
     local pidfile="$LOG_DIR/backend.pid"
@@ -568,13 +631,17 @@ start_backend() {
         -Dserver.port=8443 \
         -jar "$SECRETPAD_DIR/target/secretpad.jar" > "$LOG_DIR/backend.log" 2>&1 &
 
+    # $! 保存最近一个后台进程的 PID；将其写入 PID 文件以便后续停止或检查
     echo $! > "$pidfile"
     log_info "后端进程已启动，pid $!"
     wait_for_port 127.0.0.1 8080 120 "后端 HTTP"
 }
 
-# start_frontend: 启动 SecretPad 前端开发服务器
-# 前端通过 .env 文件中的 PROXY_URL 将 /api 请求转发到后端 8080 端口
+# start_frontend
+#   功能：启动 SecretPad 前端开发服务器。
+#   说明：
+#     - 前端通过 .env 文件中的 PROXY_URL 将 /api 请求转发到后端 8080 端口
+#     - 首次运行时会执行 pnpm bootstrap 安装依赖并构建 workspace 内部包
 start_frontend() {
     log_step "启动 SecretPad 前端 ..."
     local pidfile="$LOG_DIR/frontend.pid"
@@ -588,8 +655,10 @@ start_frontend() {
     # 确保前端代理配置指向本地后端 HTTP 端口
     local env_file="$SECRETPAD_DIR/frontend-src/apps/platform/.env"
     if [ ! -f "$env_file" ]; then
+        # 文件不存在时直接创建并写入 PROXY_URL
         echo "PROXY_URL=http://127.0.0.1:8080" > "$env_file"
     elif ! grep -q '^PROXY_URL=' "$env_file" 2>/dev/null; then
+        # 文件存在但缺少 PROXY_URL 时追加一行
         echo "PROXY_URL=http://127.0.0.1:8080" >> "$env_file"
     fi
 
@@ -607,8 +676,9 @@ start_frontend() {
     wait_for_port 127.0.0.1 8000 120 "前端开发服务器"
 }
 
-# print_summary: 打印启动成功后的摘要信息
-# 包含访问地址、登录账号、日志位置、停止命令
+# print_summary
+#   功能：打印启动成功后的摘要信息。
+#   输出内容：访问地址、登录账号、日志位置、停止命令。
 print_summary() {
     echo ""
     echo -e "${GREEN}========================================${NC}"
@@ -637,6 +707,7 @@ print_summary() {
 # 支持模式：
 #   --check / -c: 仅检查环境
 #   --help / -h:  显示帮助
+#   --reset-kuscia: 设置 RESET_KUSCIA=true 后继续执行完整启动流程
 #   无参数：       执行完整启动流程
 case "${1:-}" in
 --check | -c)
@@ -646,10 +717,12 @@ case "${1:-}" in
     exit 0
     ;;
 --reset-kuscia)
+    # 设置标志后 shift，然后继续执行 case 之后的启动流程
     RESET_KUSCIA=true
     shift
     ;;
 --help | -h)
+    # here-document：从 <<EOF 到 EOF 之间的内容作为 cat 的输入，用于输出多行帮助文本
     cat <<EOF
 sfwork 二次开发环境一键启动脚本（使用自定义 SecretFlow 镜像）
 
