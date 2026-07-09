@@ -87,17 +87,72 @@ export KUSCIA_PROTOCOL=notls
 
 ### 3.1 第一层：前端是否把请求正确发出去
 
-打开浏览器开发者工具：
+前端是用户操作的入口，也是最容易“看起来卡住”的地方。排查时先确认浏览器真的发出了请求，以及请求内容是否正确。
 
-1. **Network 面板**：找到对应的 `/api/v1alpha1/...` 请求，确认：
-   - HTTP status 是否为 200；
-   - 请求体里的 `projectId`、`graphId`、`nodes` 是否正确；
-   - 响应 `status.code` 是否为 0。
-2. **Console 面板**：查看是否有 React/TypeScript 异常、 Antd 表单校验失败等。
-3. **Sources 面板**：在关键位置打断点，例如：
-   - `secretpad/frontend-src/apps/platform/src/modules/pipeline/pipeline-creation-view.tsx`（创建训练流）
-   - `secretpad/frontend-src/apps/platform/src/modules/main-dag/graph-service.ts`（保存节点配置、启动图）
-   - `secretpad/frontend-src/apps/platform/src/modules/component-config/...`（组件属性面板）
+#### 步骤 1：打开浏览器开发者工具
+
+主流浏览器（Chrome / Edge / Firefox）都自带开发者工具，打开方式：
+
+- Windows / Linux：`F12` 或 `Ctrl + Shift + I`
+- macOS：`Cmd + Option + I`
+- 或者在页面空白处**右键 → 检查 / Inspect**
+
+打开后顶部会有一排标签页：`Elements`、`Console`、`Network`、`Sources`、`Application` 等。排查接口问题主要用 `Network`、`Console`、`Sources` 三个。
+
+> 本机开发地址通常是 `http://localhost:8000`，请确保你在这个页面上打开开发者工具。
+
+---
+
+#### 步骤 2：Network（网络）面板 —— 看请求有没有发出去
+
+1. 点击 `Network` 标签。
+2. 点击面板左上角的 🚫 **Clear** 按钮清空已有记录，避免历史请求干扰。
+3. 勾选面板顶部的 `Preserve log`（保留日志）。这样页面刷新或跳转后，之前的请求仍会保留，方便回溯。
+4. 触发你想排查的操作，例如点击“运行”按钮。
+5. 观察面板中是否出现新的请求条目。SecretPad 后端接口一般以 `/api/v1alpha1/` 开头，常见接口：
+   - `/api/v1alpha1/graph/start` —— 启动训练流
+   - `/api/v1alpha1/graph/update` —— 保存图节点
+   - `/api/v1alpha1/graph/node/status` —— 查询节点状态
+6. 点击目标请求，右侧面板会显示三栏：
+   - **Headers（标头）**：请求方法（`POST` / `GET`）、状态码（`Status`）、请求 URL。
+   - **Payload（负载）**：请求体，即前端传给后端的数据。重点检查 `projectId`、`graphId`、`nodes` 等字段是否正确。
+   - **Preview / Response（响应）**：后端返回的数据。SecretPad 统一返回格式为：
+     ```json
+     { "status": { "code": 0, "msg": "success" }, "data": { ... } }
+     ```
+     重点看 `status.code` 是否为 `0`。非 0 表示后端校验失败或业务错误，此时问题进入下一层（后端）。
+7. 如果请求状态码是 `4xx` / `5xx`，说明请求本身有问题或后端报错；如果请求**完全没有出现**，说明前端没有触发调用，需要看 Console 或 Sources。
+
+> **小技巧**：在 Network 面板顶部的过滤框输入 `api/v1alpha1`，可以快速只显示 SecretPad 接口，排除图片、CSS、JS 等噪音。
+
+---
+
+#### 步骤 3：Console（控制台）面板 —— 看前端报错
+
+1. 点击 `Console` 标签。
+2. 红色文字表示报错，点击左侧 ▶ 展开，可以看到出错的文件路径和行号。
+3. 常见前端问题：
+   - `TypeError: Cannot read properties of undefined`：某个数据没拿到或被错误地传了空值。
+   - `Unhandled Rejection`：异步请求失败，Promise 没有被 catch。
+   - Ant Design 表单校验错误：组件属性值格式不正确，导致表单无法提交。
+4. 报错中的文件名通常形如 `main.d2f4e1.js:12345`。 development 模式（`pnpm dev`）下点击后会显示原始 TypeScript 文件名和行号；production 构建则可能是压缩后的代码。
+
+---
+
+#### 步骤 4：Sources（源码）面板 —— 打断点调试
+
+如果 Network 和 Console 还定位不到，可以在源码中打断点：
+
+1. 点击 `Sources` 标签。
+2. 按 `Ctrl + P`（macOS `Cmd + P`），输入文件名，例如 `graph-service.ts`，回车打开。
+3. 在关键函数（如 `startGraph`、`saveGraph`）左侧行号处单击，设置一个蓝色断点。
+4. 再次触发操作，浏览器会在断点处暂停，右侧 `Scope` 区域可以查看当前变量值。
+5. 常用断点文件：
+   - `secretpad/frontend-src/apps/platform/src/modules/pipeline/pipeline-creation-view.tsx` —— 创建/打开训练流
+   - `secretpad/frontend-src/apps/platform/src/modules/main-dag/graph-service.ts` —— 保存图、启动图
+   - `secretpad/frontend-src/apps/platform/src/modules/component-config/...` —— 组件属性面板
+
+---
 
 常用前端状态观察：
 
