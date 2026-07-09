@@ -44,8 +44,9 @@ set -euo pipefail
 # ------------------------------------------------------------------
 # 全局路径与变量
 # ------------------------------------------------------------------
-# SFWORK_ROOT: sfwork 工作区根目录，所有子项目均在此目录下
-SFWORK_ROOT="/home/charles/code/sfwork"
+# SFWORK_ROOT: sfwork 工作区根目录，根据本脚本所在位置自动推导
+# 本脚本位于 sfwork/scripts/ 下，因此根目录为其父目录
+SFWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 各子项目路径
 SECRETPAD_DIR="$SFWORK_ROOT/secretpad"     # SecretPad 前后端源码
