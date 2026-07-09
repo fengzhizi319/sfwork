@@ -244,6 +244,7 @@ pnpm --filter secretpad dev
 3. 拖拽组件到画布，右侧配置抽屉正确显示：k、l、准标识符列、敏感属性列、最大抑制比例、是否输出报告。
 4. 输入端口为 `input_ds`，输出端口为 `output_ds` 与 `report`。
 5. 可正常连线、保存、运行。
+6. （如已新增模板）新建训练流时可在模板列表看到“隐私计算”相关模板；使用模板后节点、默认参数与连线正确加载。
 
 ---
 
@@ -298,13 +299,13 @@ python -m pytest tests/component/privacy/test_privacy_components.py -v --env=sim
 | SecretFlow 镜像自检 | 通过 | 构建时完成组件注册断言 |
 | Kuscia 镜像版本检查 | 通过 | `make image` 成功，容器可启动 |
 | SecretPad 后端元数据 | 通过 | `secretpad/config/components/secretflow.json` 与 `secretpad/config/i18n/secretflow.json` 已重新生成并包含 `l_diversity`；后端 jar 构建成功 |
-| SecretPad 前端展示 | 通过 | `component-tree-service.ts` 与 `component-icon.tsx` 修改后 ESLint 无新增错误 |
+| SecretPad 前端展示 | 通过 | `component-tree-service.ts` 与 `component-icon.tsx` 修改后 ESLint 无新增错误；`quick-config-privacy.tsx`、`pipeline-template-privacy.ts` 等新增文件通过 lint-staged |
 | 镜像 tar 包 | 已生成 | `secretflow/docker/privacy-dev/sf-privacy-dev-1.15.0.dev-privacy.tar`（930M）<br>`kuscia/kuscia-v1.2.0b0-26-g73f3680-20260708150644.tar` |
 | 端到端链路 | 待完整启动后验证 | 非 Docker 脚本或 Kuscia 部署 |
 
 ---
 
-## 11. 问题记录
+## 12. 问题记录
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|

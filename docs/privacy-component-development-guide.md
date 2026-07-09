@@ -260,7 +260,8 @@ SecretPad Backend
     ├── 校验 graph 节点和边
     ├── ProjectJob.genProjectJob()
     ├── JobRenderHandler.renderInputs()  解析上游输出为 DistData
-    ├── KusciaJobConverter.converter()   构建 CreateJobRequest
+    ├── KusciaJobConverter.converter()   将 ProjectJob 转成 CreateJobRequest
+    │   └── NodeDefUtils.toNodeEvalParam()  把前端保存的 Pipeline.NodeDef 转为 secretflow_spec.v1.NodeEvalParam
     └── KusciaGrpcClientAdapter.createJob()
         │
         ▼
@@ -345,8 +346,12 @@ source .venv/bin/activate  # 或 conda activate sf310
 python -c "from secretflow.component.core import Registry; print(Registry.get_definition_by_id('privacy/my_privacy_comp:1.0.0'))"
 
 # 生成组件 catalog
-secretflow component inspect -a > /tmp/secretflow.json
-secretflow component get_translation > /tmp/secretflow_i18n.json
+secretflow component inspect -a > /tmp/secretflow.json           # 组件元数据
+cp /tmp/secretflow.json /home/charles/code/sfwork/secretpad/config/components/secretflow.json
+
+secretflow component get_translation > /tmp/secretflow_i18n.json   # 国际化翻译（临时文件）
+# 目标文件名必须是 secretflow.json，SecretPad 会读取 secretpad/config/i18n/secretflow.json
+cp /tmp/secretflow_i18n.json /home/charles/code/sfwork/secretpad/config/i18n/secretflow.json
 
 # 跑单测
 python -m pytest tests/component/privacy/test_my_privacy_comp.py -v
@@ -355,11 +360,7 @@ python -m pytest tests/component/privacy/test_my_privacy_comp.py -v
 ### 步骤 3：刷新 SecretPad 组件元数据
 
 ```bash
-cp /tmp/secretflow.json /home/charles/code/sfwork/secretpad/config/components/secretflow.json
-cp /tmp/secretflow_i18n.json /home/charles/code/sfwork/secretpad/config/i18n/secretflow.json
-```
-
-或使用项目脚本：
+# 或使用项目脚本（内部会做同样的 copy）：
 
 ```bash
 cd /home/charles/code/sfwork/secretpad
@@ -367,6 +368,8 @@ bash scripts/update_components.sh <secretflow-image-tag>
 ```
 
 ### 步骤 4：修改 SecretPad 前端
+
+**4.1 组件列表与图标**
 
 编辑 `secretpad/frontend-src/apps/platform/src/modules/component-tree/component-tree-service.ts`：
 
@@ -403,6 +406,17 @@ export const ComponentIcons: Record<string, React.ReactElement> = {
   // ...
 };
 ```
+
+**4.2 快速配置面板与流水线模板（可选但推荐）**
+
+如果新组件属于隐私计算类，还需要新增/调整：
+
+- `secretpad/frontend-src/apps/platform/src/modules/component-config/template-quick-config/quick-config-privacy.tsx`
+  - 差分隐私 / L-多样性等组件的快速配置抽屉。
+- `secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy.ts`
+  - 隐私计算流水线模板，预置节点与默认属性。
+- `secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy-guide.ts`
+  - 模板引导文案。
 
 ### 步骤 5：重启并验证
 
@@ -522,6 +536,13 @@ secretpad/
 secretpad/frontend-src/apps/platform/src/modules/component-tree/
   ├── component-tree-service.ts           # 修改：加入 privacy 分类
   └── component-icon.tsx                  # 修改：加入 privacy 图标
+
+secretpad/frontend-src/apps/platform/src/modules/component-config/template-quick-config/
+  └── quick-config-privacy.tsx            # 可选：隐私组件快速配置面板
+
+secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/
+  ├── pipeline-template-privacy.ts        # 可选：隐私计算流水线模板
+  └── pipeline-template-privacy-guide.ts  # 可选：模板引导文案
 ```
 
 Kuscia 不需要改动。

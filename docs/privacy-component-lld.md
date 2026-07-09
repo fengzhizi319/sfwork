@@ -942,6 +942,9 @@ mvn clean install -Dmaven.test.skip=true
 ```text
 secretpad/frontend-src/apps/platform/src/modules/component-tree/component-tree-service.ts
 secretpad/frontend-src/apps/platform/src/modules/component-tree/component-icon.tsx
+secretpad/frontend-src/apps/platform/src/modules/component-config/template-quick-config/quick-config-privacy.tsx
+secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy.ts
+secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy-guide.ts
 ```
 
 ### 8.2 `component-tree-service.ts` 修改
@@ -1012,7 +1015,13 @@ export const ComponentIcons: Record<string, React.ReactElement> = {
 };
 ```
 
-### 8.4 自定义渲染器
+### 8.4 快速配置与流水线模板
+
+- `quick-config-privacy.tsx`：为差分隐私、L-多样性等隐私组件提供快速配置抽屉。
+- `pipeline-template-privacy.ts`：预置隐私计算训练流模板，包含样本表节点与隐私组件节点。
+- `pipeline-template-privacy-guide.ts`：模板引导文案，帮助用户理解模板用途。
+
+### 8.5 自定义渲染器
 
 `l_diversity` 使用的基础属性类型（int、float、str、bool）均能被默认渲染器处理，**无需**新增 custom renderer。
 
@@ -1068,7 +1077,7 @@ sequenceDiagram
     U->>F: 拖拽 l_diversity 节点、配置参数、连线
     U->>F: 点击运行
     F->>B: POST /api/v1alpha1/graph/start
-    B->>B: 校验图、渲染 NodeEvalParam
+    B->>B: 校验图、NodeDefUtils.toNodeEvalParam() 生成 secretflow_spec.v1.NodeEvalParam
     B->>K: gRPC JobService.CreateJob
     K->>K: 创建 KusciaJob → KusciaTask
     K->>C: 调度 Pod，挂载 task-config.conf
@@ -1095,12 +1104,14 @@ sequenceDiagram
 | **SecretFlow 验证** | 5. 检查注册 | `python -c "from secretflow.component.core import Registry; print(Registry.get_definition_by_id('privacy/l_diversity:1.0.0'))"` |
 | | 6. 运行 sim 测试 | `python -m pytest tests/component/privacy/test_l_diversity.py -v` |
 | | 7. 运行 MPC 测试 | `python -m pytest tests/component/privacy/test_l_diversity.py -v --env=prod` |
+| | 7.5. 构建镜像 | `cd secretflow/docker/privacy-dev && docker build . -f Dockerfile -t secretflow/sf-privacy-dev:1.15.0.dev-privacy`；若阿里云源失败，追加 `--build-arg PIP_INDEX_URL=https://pypi.org/simple/` |
 | **SecretPad 后端** | 8. 生成元数据 | `secretflow component inspect -a > secretpad/config/components/secretflow.json` |
 | | 9. 生成翻译 | `secretflow component get_translation > secretpad/config/i18n/secretflow.json` |
 | | 10. 构建后端 | `cd secretpad && mvn clean install -Dmaven.test.skip=true` |
 | | 11. 重启后端 | 重新启动 secretpad.jar |
 | **SecretPad 前端** | 12. 修改组件树映射 | `component-tree-service.ts` |
 | | 13. 增加图标 | `component-icon.tsx` |
+| | 13.5. 新增快速配置/模板 | `quick-config-privacy.tsx`、`pipeline-template-privacy.ts`、`pipeline-template-privacy-guide.ts` |
 | | 14. 启动前端 | `pnpm --filter secretpad dev` |
 | **端到端** | 15. 启动全链路 | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh` |
 | | 16. 界面验证 | 组件树出现“隐私计算/L-多样性”，可配置、连线、运行、查看报告 |
@@ -1160,6 +1171,13 @@ secretpad/
 secretpad/frontend-src/apps/platform/src/modules/component-tree/
   ├── component-tree-service.ts          # 修改
   └── component-icon.tsx                 # 修改
+
+secretpad/frontend-src/apps/platform/src/modules/component-config/template-quick-config/
+  └── quick-config-privacy.tsx           # 新增
+
+secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/
+  ├── pipeline-template-privacy.ts       # 新增
+  └── pipeline-template-privacy-guide.ts # 新增
 
 kuscia/
   # 无代码变更

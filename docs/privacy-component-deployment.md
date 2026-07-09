@@ -181,6 +181,13 @@ cd docker/privacy-dev
 #   - 仓库名：secretflow/sf-privacy-dev
 #   - 版本：1.15.0.dev-privacy（1.15.0 开发版，隐私计算组件）
 docker build . -f Dockerfile -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
+
+# 说明：
+# Dockerfile 默认使用阿里云 PyPI 镜像源（ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/）。
+# 若出现下载中断、Read timed out 或 pip 哈希校验失败，可切换到官方 PyPI：
+# docker build . -f Dockerfile \
+#   --build-arg PIP_INDEX_URL=https://pypi.org/simple/ \
+#   -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
 ```
 
 ```tex
@@ -304,7 +311,7 @@ secretflow/kuscia:v1.2.0b0-26-g73f3680-20260708150644
 
 
 
-### 4.4 加载本地 tar 包（离线场景）
+### 4.3 加载本地 tar 包（离线场景）
 
 如果已通过 `docker save` 导出 tar，可在目标环境加载：
 
@@ -316,7 +323,7 @@ docker load -i /home/charles/code/sfwork/secretflow/docker/privacy-dev/sf-privac
 docker load -i /home/charles/code/sfwork/kuscia/kuscia-v1.2.0b0-26-g73f3680-20260708150644.tar
 ```
 
-### 4.3 SecretPad 镜像
+### 4.4 SecretPad 镜像
 
 SecretPad 本次无 Java 代码变更，只需确保镜像构建时包含新生成的 `secretflow.json` 与 `secretflow_i18n.json`。
 
@@ -387,10 +394,10 @@ kubectl get appimage secretflow-privacy-dev
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|
-| SecretPad 看不到 `l_diversity` | 未重新生成或替换 `secretflow.json` / `secretflow_i18n.json`，或未重启后端 | 执行第 3.3 步并重启 |
+| SecretPad 看不到 `l_diversity` | 未重新生成或替换 `secretpad/config/components/secretflow.json` 与 `secretpad/config/i18n/secretflow.json`，或未重启后端 | 执行第 3.3 步并重启 |
 | Kuscia 任务报找不到 `privacy/l_diversity` | SecretFlow 镜像未包含新组件 | 确认镜像 tag 与 AppImage 一致，容器内执行注册检查 |
-| Docker build 中 pip 超时 | 网络不稳定或 PyPI 访问慢 | 使用 `--no-deps` 覆盖安装，或配置 Aliyun/清华镜像源 |
-| 前端组件树不显示 | 未修改 `component-tree-service.ts` 或 `component-icon.tsx` | 检查第 3.5 步对应修改 |
+| Docker build 中 pip 超时/哈希校验失败 | 网络不稳定导致 PyPI 下载中断 | 切换到官方 PyPI：`docker build ... --build-arg PIP_INDEX_URL=https://pypi.org/simple/ -t ...` |
+| 前端组件树/模板不显示 | 未修改 `component-tree-service.ts`、`component-icon.tsx`，或未新增 `quick-config-privacy.tsx`、`pipeline-template-privacy.ts` 等模板 | 检查第 3.5 步对应修改 |
 
 ---
 

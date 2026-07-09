@@ -94,7 +94,7 @@
 **关键边界**：
 
 - SecretFlow 是组件实现与元数据的**唯一来源**。
-- SecretPad 不解析 Python，只消费 `secretflow.json` 与 `secretflow_i18n.json`。
+- SecretPad 不解析 Python，只消费 `secretpad/config/components/secretflow.json` 与 `secretpad/config/i18n/secretflow.json`。
 - Kuscia 对组件类型完全无感知，仅透传 `task_input_config`。
 
 ---
@@ -205,6 +205,11 @@ SecretPad Frontend
 
 - `graph-hook-service` 根据 `ComponentDef.inputs` / `outputs` 生成节点端口。
 - 端口类型（`types` 数组）决定连线兼容性：源端口 `sf.table.individual` 只能连入接受该类型的目标端口。
+
+### 8.4 快速配置与流水线模板
+
+- `quick-config-privacy.tsx` 提供隐私计算组件（差分隐私、L-多样性等）的快速配置抽屉。
+- `pipeline-template-privacy.ts` 与 `pipeline-template-privacy-guide.ts` 提供预置的隐私计算训练流模板，降低用户配置成本。
 
 ---
 
@@ -317,3 +322,6 @@ SecretFlow Container
 5. `secretflow/tests/component/privacy/test_privacy_components.py`
 6. `secretpad/frontend-src/apps/platform/src/modules/component-tree/component-tree-service.ts`
 7. `secretpad/frontend-src/apps/platform/src/modules/component-tree/component-icon.tsx`
+8. `secretpad/frontend-src/apps/platform/src/modules/component-config/template-quick-config/quick-config-privacy.tsx`
+9. `secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy.ts`
+10. `secretpad/frontend-src/apps/platform/src/modules/pipeline/templates/pipeline-template-privacy-guide.ts`

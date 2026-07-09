@@ -91,7 +91,8 @@
 2. 确认生成的 `secretflow.json` 包含 `domain=privacy`、`name=l_diversity` 的 `ComponentDef`。
 3. 重启 SecretPad 后端以加载新元数据。
 
-> 由于 `l_diversity` 仅使用已有的 `sf.table.individual` 与 `sf.report` 类型，以及基础属性类型，因此不需要修改 `GraphBuilder`、`JobRenderHandler`、`KusciaJobConverter` 等 Java 模块。
+> 由于 `l_diversity` 仅使用已有的 `sf.table.individual` 与 `sf.report` 类型，以及基础属性类型，因此不需要修改 `GraphBuilder`、`JobRenderHandler` 等 Java 模块。
+> 后端 `KusciaJobConverter` 会通过 `NodeDefUtils.toNodeEvalParam()` 将前端保存的 `Pipeline.NodeDef` 转换为 `secretflow_spec.v1.NodeEvalParam`，再写入 `TaskInputConfig.sf_node_eval_param`。
 
 ---
 
@@ -114,6 +115,14 @@
 ### 4.3 表单与 DAG
 
 `l_diversity` 的全部属性均为默认类型（int、float、str、bool），配置表单由默认渲染器自动处理；DAG 端口由 `graph-hook-service` 根据 `ComponentDef.inputs/outputs` 自动生成，无需额外开发。
+
+### 4.4 快速配置与流水线模板
+
+为提升隐私计算组件的使用体验，新增/调整了：
+
+- `quick-config-privacy.tsx`：差分隐私 / L-多样性等组件的快速配置抽屉。
+- `pipeline-template-privacy.ts`：预置的隐私计算训练流模板，包含样本表 → L-多样性 / 差分隐私节点。
+- `pipeline-template-privacy-guide.ts`：模板引导文案。
 
 ---
 
@@ -146,10 +155,23 @@ secretflow/sf-privacy-dev:1.15.0.dev-privacy
 
 构建方式：
 
-1. 使用 `python -m build --wheel` 在工作区生成 `secretflow-1.15.0.dev20260708-py3-none-any.whl`。
-2. 通过 `secretflow/docker/privacy-dev/Dockerfile` 将 wheel 及其运行时依赖安装到 `secretflow/ubuntu-base-ci:20250228` 基础镜像中。
-3. 镜像内同时安装了 `kuscia` Python 包，确保 `secretflow.kuscia.entry` 能正常读取 `task-config.conf`。
-4. 构建时执行 `Registry.get_definition_by_id('privacy/l_diversity:1.0.0')` 进行组件注册自检。
+1. 使用 `python -m build --wheel` 在工作区生成 `secretflow-1.15.0.dev*.whl`。
+2. 将 wheel 复制到 `secretflow/docker/privacy-dev/` 作为构建上下文。
+3. 通过 `secretflow/docker/privacy-dev/Dockerfile` 将 wheel 及其运行时依赖安装到 `secretflow/ubuntu-base-ci:20250228` 基础镜像中。
+4. 镜像内同时安装了 `kuscia` Python 包，确保 `secretflow.kuscia.entry` 能正常读取 `task-config.conf`。
+5. 构建时执行 `Registry.get_definition_by_id('privacy/l_diversity:1.0.0')` 进行组件注册自检。
+
+```bash
+cd /home/charles/code/sfwork/secretflow/docker/privacy-dev
+
+# 默认使用阿里云 PyPI 镜像源
+docker build . -f Dockerfile -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
+
+# 若阿里云源网络不稳定，切换到官方 PyPI：
+# docker build . -f Dockerfile \
+#   --build-arg PIP_INDEX_URL=https://pypi.org/simple/ \
+#   -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
+```
 
 该镜像主要用于本地/CI 快速验证；生产环境建议使用官方 `docker/dev/build.sh` 或 `docker/release/build.sh` 流程构建完整镜像。
 
@@ -222,6 +244,11 @@ secretpad/
   frontend-src/apps/platform/src/modules/component-tree/
     ├── component-tree-service.ts    [修改]
     └── component-icon.tsx           [修改]
+  frontend-src/apps/platform/src/modules/component-config/template-quick-config/
+    └── quick-config-privacy.tsx     [新增]
+  frontend-src/apps/platform/src/modules/pipeline/templates/
+    ├── pipeline-template-privacy.ts        [新增]
+    └── pipeline-template-privacy-guide.ts  [新增]
 
 kuscia/
   # 无源码变更，仅执行 make image 生成新镜像
