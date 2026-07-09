@@ -28,7 +28,7 @@
 #   SECRETFLOW_REPO      secretflow 仓库地址（默认：https://github.com/fengzhizi319/secretflow.git）
 #   SECRETPAD_BRANCH     secretpad 分支（默认：main）
 #   KUSCIA_BRANCH        kuscia 分支（默认：main）
-#   SECRETFLOW_BRANCH    secretflow 分支（默认：charles）
+#   SECRETFLOW_BRANCH    secretflow 分支（默认：main）
 # ============================================================================
 
 # Bash 严格模式：
@@ -95,7 +95,7 @@ SECRETFLOW_REPO="${SECRETFLOW_REPO:-${BASE_URL}/secretflow.git}"
 # 分支名：同样支持环境变量覆盖。
 SECRETPAD_BRANCH="${SECRETPAD_BRANCH:-main}"
 KUSCIA_BRANCH="${KUSCIA_BRANCH:-main}"
-SECRETFLOW_BRANCH="${SECRETFLOW_BRANCH:-charles}"
+SECRETFLOW_BRANCH="${SECRETFLOW_BRANCH:-main}"
 
 # ------------------------------------------------------------------
 # 克隆/更新单个仓库
