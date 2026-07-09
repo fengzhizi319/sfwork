@@ -293,7 +293,7 @@ Succeed    → 任务完成
    ```bash
    # 列出该 Lite 节点上所有容器（含已退出）
    docker exec ${USER}-kuscia-lite-alice crictl ps -a
-
+   
    # 看日志
    docker exec ${USER}-kuscia-lite-alice crictl logs <container-id>
    ```
@@ -690,7 +690,7 @@ docker build . -f Dockerfile -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
   # 1. 备份旧镜像
   docker tag secretflow/sf-privacy-dev:1.15.0.dev-privacy \
              secretflow/sf-privacy-dev:1.15.0.dev-privacy-backup
-
+  
   # 2. 启动临时容器并替换修改过的 Python 文件
   docker run -d --name sf-patch --entrypoint sleep \
     secretflow/sf-privacy-dev:1.15.0.dev-privacy 60
@@ -698,7 +698,7 @@ docker build . -f Dockerfile -t secretflow/sf-privacy-dev:1.15.0.dev-privacy
     sf-patch:/root/miniconda3/lib/python3.10/site-packages/secretflow/kuscia/meta_conversion.py
   docker commit sf-patch secretflow/sf-privacy-dev:1.15.0.dev-privacy
   docker rm -f sf-patch
-
+  
   # 3. 重新导入到 Kuscia Lite 节点
   docker save secretflow/sf-privacy-dev:1.15.0.dev-privacy | \
     docker exec -i ${USER}-kuscia-lite-alice kuscia image load
@@ -817,7 +817,7 @@ domain_data.attributes["dist_data"] = _message_to_json_compat(
      -H 'Content-Type: application/json' \
      -d '{"name":"admin","passwordHash":"'$(echo -n 12345678 | sha256sum | awk '{print $1}')'"}' | \
      python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
-
+   
    curl -s -X POST http://127.0.0.1:8080/api/v1alpha1/graph/start \
      -H 'Content-Type: application/json' -H "User-Token: ${TOKEN}" \
      -d '{"projectId":"ddebgquk","graphId":"atkncwfs","nodes":["atkncwfs-node-1","atkncwfs-node-2"]}'
