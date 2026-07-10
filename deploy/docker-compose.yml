@@ -1,0 +1,66 @@
+# ============================================================================
+# sfwork 本地/测试环境 Docker Compose 模板
+# ============================================================================
+# 用法：
+#   cd deploy
+#   cp .env.example .env
+#   # 编辑 .env 中的密码和镜像版本
+#   docker compose up -d
+#
+# 说明：
+#   - 本模板使用官方 Kuscia / SecretPad 镜像，适合快速验证部署架构
+#   - 生产环境请使用 Helm / Kubernetes，并接入外部密钥管理
+#   - 端口、密码等敏感配置请通过 deploy/.env 注入，不要提交到 git
+#   - Kuscia 实际启动命令请参考官方镜像 entrypoint，本模板仅做示例
+# ============================================================================
+
+services:
+  kuscia-master:
+    image: ${KUSCIA_IMAGE:-secretflow/kuscia:latest}
+    container_name: sfwork-kuscia-master
+    hostname: kuscia-master
+    privileged: true
+    ports:
+      - "8082:8082"
+      - "8083:8083"
+      - "8070:8070"
+      - "8071:8071"
+    environment:
+      - KUSCIA_PROTOCOL=${KUSCIA_PROTOCOL:-notls}
+      - NODE_ID=${KUSCIA_MASTER_NODE_ID:-kuscia-master}
+    volumes:
+      - kuscia-master-data:/home/kuscia/var
+    # 注意：以下命令仅为占位示例，实际部署请替换为 Kuscia 官方推荐启动方式
+    # command: ["sh", "-c", "kuscia start"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  secretpad:
+    image: ${SECRETPAD_IMAGE:-secretflow/secretpad:latest}
+    container_name: sfwork-secretpad
+    depends_on:
+      kuscia-master:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "9001:9001"
+    environment:
+      - KUSCIA_API_ADDRESS=${KUSCIA_API_ADDRESS:-kuscia-master}
+      - KUSCIA_API_PORT=${KUSCIA_API_PORT:-8083}
+      - KUSCIA_GW_ADDRESS=${KUSCIA_GW_ADDRESS:-kuscia-master:80}
+      - KUSCIA_PROTOCOL=${KUSCIA_PROTOCOL:-notls}
+      - SECRETPAD_USER_NAME=${SECRETPAD_USER_NAME:-admin}
+      - SECRETPAD_PASSWORD=${SECRETPAD_PASSWORD:-}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - KEY_PASSWORD=${KEY_PASSWORD:-}
+    volumes:
+      - secretpad-data:/app/db
+
+volumes:
+  kuscia-master-data:
+  secretpad-data:

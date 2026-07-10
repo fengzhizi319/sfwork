@@ -29,6 +29,7 @@
 #   - 可在 sfwork 根目录创建 .env 文件（参考 .env.example）
 #   - 启动/停止脚本会自动读取 .env 中的变量
 #   - 也可通过 DEV_START_ENV_FILE 指定其他 env 文件路径
+#   - 优先级：当前 shell 环境变量 > .env 文件 > 脚本内置默认值
 #
 # 用法：
 #   bash scripts/dev-start.sh          # 完整启动

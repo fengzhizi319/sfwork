@@ -28,6 +28,12 @@
 #   - Kuscia Master 需要监听 53 / 80 等特权端口，因此脚本内部使用 sudo
 #   - 默认 sudo 密码为 110734，强烈建议通过 SUDO_PWD 环境变量覆盖
 # ============================================================================
+#
+# 环境变量配置：
+#   - 可在 sfwork 根目录创建 .env 文件（参考 .env.example）
+#   - 启动/停止脚本会自动读取 .env 中的变量
+#   - 也可通过 SUDO_PWD 环境变量传入 sudo 密码
+# ============================================================================
 
 # Bash 严格模式：
 #   -e: 任一命令失败立即退出
@@ -38,8 +44,17 @@ set -euo pipefail
 # ------------------------------------------------------------------
 # 全局路径与常量
 # ------------------------------------------------------------------
-# ROOT_DIR: sfwork 工作区根目录，所有子项目均在此目录下
-ROOT_DIR="/home/charles/code/sfwork"
+# ROOT_DIR: sfwork 工作区根目录，根据本脚本所在位置自动推导
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# 从 .env 文件加载环境变量配置
+DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$ROOT_DIR/.env}"
+if [ -f "$DEV_START_ENV_FILE" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$DEV_START_ENV_FILE"
+    set +a
+fi
 
 # 各子项目源码目录
 KUSCIA_DIR="$ROOT_DIR/kuscia"
@@ -57,8 +72,9 @@ KUSCIA_HOME="$ROOT_DIR/.local-kuscia"
 CONDA_ENV="${CONDA_ENV:-sf310}"
 
 # SUDO_PWD: 用于自动输入 sudo 密码。
-# 默认值仅用于本地开发便利；生产环境或共享机器上请通过环境变量覆盖。
-SUDO_PWD="${SUDO_PWD:-110734}"
+# 本地开发时可写入 .env 文件（已被 .gitignore 排除）；CI 或共享机器请通过环境变量注入。
+# 不再提供硬编码默认值，以避免默认密码泄露风险。
+SUDO_PWD="${SUDO_PWD:-}"
 
 # 创建日志和 PID 目录
 # -p 表示若目录已存在则忽略，并自动创建父目录
@@ -84,14 +100,23 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 # sudo 包装
 # ------------------------------------------------------------------
 # run_sudo
-#   功能：使用 SUDO_PWD 环境变量自动输入密码，执行 sudo 命令。
+#   功能：安全地执行 sudo 命令。
 #   参数：$@ - 要传递给 sudo 的命令及参数
-#   说明：
-#     - echo "$SUDO_PWD" 将密码通过管道传给 sudo -S
-#     - sudo -S 从 stdin 读取密码，实现非交互式 sudo
-#     - 注意：在脚本中明文传递密码存在安全风险，仅建议本地开发使用
+#   策略：
+#     1. 若 SUDO_PWD 已设置，则通过管道传给 sudo -S
+#     2. 若当前用户已配置免密 sudo，则直接使用 sudo -n
+#     3. 否则报错并提示设置 SUDO_PWD
+#   注意：在脚本中明文传递密码存在安全风险，仅建议本地开发使用。
 run_sudo() {
-    echo "$SUDO_PWD" | sudo -S "$@"
+    if [ -n "${SUDO_PWD:-}" ]; then
+        echo "$SUDO_PWD" | sudo -S "$@"
+    elif sudo -n true 2>/dev/null; then
+        sudo "$@"
+    else
+        log_error "需要 sudo 权限但未设置 SUDO_PWD，且当前用户未配置免密 sudo"
+        log_error "请设置环境变量：export SUDO_PWD=你的sudo密码"
+        exit 1
+    fi
 }
 
 # ------------------------------------------------------------------
@@ -248,9 +273,9 @@ ensure_conda_env() {
     ensure_conda_env
     log_info "当前 Python 环境：$CONDA_PREFIX ($(python --version))"
 
-    # 安全提示：若仍在使用默认 sudo 密码，提醒用户覆盖
-    if [ "$SUDO_PWD" = "110734" ]; then
-        log_warn "使用默认 sudo 密码 110734；建议通过环境变量 SUDO_PWD 覆盖"
+    # 安全提示：若通过 .env 或环境变量设置了 SUDO_PWD，提醒不要在共享环境使用
+    if [ -n "${SUDO_PWD:-}" ]; then
+        log_warn "当前通过 SUDO_PWD 传入 sudo 密码；请勿将密码提交到版本控制"
     fi
 }
 
