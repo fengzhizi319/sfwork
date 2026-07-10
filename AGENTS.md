@@ -19,6 +19,18 @@ This guide describes the `sfwork` workspace for AI coding agents. The workspace 
 
 There is also a legacy copy of the frontend at `secretpad-frontend/`, but active development happens in `secretpad/frontend-src/`.
 
+### 1.1 Local Privacy SDKs / Agent
+
+In addition to the four main projects, `sfwork` is accompanied by three standalone local-privacy repositories. They provide masking, K-anonymity, differential privacy, and query obfuscation without requiring a full SecretFlow job:
+
+| Project | Language | Role | Repository |
+|---|---|---|---|
+| **privacy-java-sdk** | Java 17 | Local SDK for Java/SecretPad backends | [github.com/fengzhizi319/privacy-java-sdk](https://github.com/fengzhizi319/privacy-java-sdk) |
+| **privacy-go-sdk** | Go 1.21 | Local SDK for Go microservices | [github.com/fengzhizi319/privacy-go-sdk](https://github.com/fengzhizi319/privacy-go-sdk) |
+| **privacy-local-agent** | Python 3.10+ | REST + gRPC Sidecar for multi-language access | [github.com/fengzhizi319/privacy-local-agent](https://github.com/fengzhizi319/privacy-local-agent) |
+
+Clone them next to the `sfwork` root directory when needed; they are ignored by the `sfwork` root repository. Use the Java/Go SDKs when the consuming service is written in the same language and can embed a library. Use the Agent when you need a language-agnostic Sidecar or cannot embed an SDK. See `docs/dp/README.md` for a selection guide.
+
 ### How the pieces fit together
 
 ```text
@@ -52,7 +64,10 @@ Data access is mediated by **DataMesh** (part of Kuscia) using gRPC and Apache A
 ├── kuscia/                       # Go orchestration engine
 ├── secretflow/                   # Python privacy-preserving ML framework
 ├── secretpad/                    # Java backend + frontend-src
-└── secretpad-frontend/           # legacy frontend copy (inactive)
+├── secretpad-frontend/           # legacy frontend copy (inactive)
+├── privacy-java-sdk/             # Java local privacy SDK
+├── privacy-go-sdk/               # Go local privacy SDK
+└── privacy-local-agent/          # Python REST/gRPC privacy agent
 ```
 
 ---
@@ -495,3 +510,6 @@ When modifying code, understand which layer owns the contract:
 | Dev frontend | `cd secretpad/frontend-src && pnpm --filter secretpad dev` |
 | Run all locally | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh` |
 | Stop all locally | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop` |
+| Test privacy-java-sdk | `cd privacy-java-sdk && mvn test` |
+| Test privacy-go-sdk | `cd privacy-go-sdk && go test ./...` |
+| Test privacy-local-agent | `cd privacy-local-agent && PYTHONPATH=. pytest tests -q` |

@@ -6,12 +6,15 @@
 #
 # 功能概述：
 #   将 sfwork 工作区所需的子项目克隆到本地指定目录。
-#   当前 sfwork 根仓库只管理文档、配置和编排脚本；四大子项目作为独立 git 仓库存在。
+#   当前 sfwork 根仓库只管理文档、配置和编排脚本；四大子项目及本地隐私 SDK/Agent 作为独立 git 仓库存在。
 #
 # 默认克隆的子项目：
-#   - secretpad   -> ./secretpad/   （包含前端 frontend-src/ 与后端）
-#   - kuscia      -> ./kuscia/
-#   - secretflow  -> ./secretflow/
+#   - secretpad             -> ./secretpad/   （包含前端 frontend-src/ 与后端）
+#   - kuscia                -> ./kuscia/
+#   - secretflow            -> ./secretflow/
+#   - privacy-java-sdk      -> ./privacy-java-sdk/
+#   - privacy-go-sdk        -> ./privacy-go-sdk/
+#   - privacy-local-agent   -> ./privacy-local-agent/
 #
 # 说明：
 #   - secretpad 已包含前端源码，因此无需单独克隆前端仓库。
@@ -23,12 +26,18 @@
 #   bash scripts/clone-repos.sh --ssh        # 使用 SSH 协议克隆
 #
 # 环境变量（均可选）：
-#   SECRETPAD_REPO       secretpad 仓库地址（默认：https://github.com/fengzhizi319/secretpad.git）
-#   KUSCIA_REPO          kuscia 仓库地址（默认：https://github.com/fengzhizi319/kuscia.git）
-#   SECRETFLOW_REPO      secretflow 仓库地址（默认：https://github.com/fengzhizi319/secretflow.git）
-#   SECRETPAD_BRANCH     secretpad 分支（默认：main）
-#   KUSCIA_BRANCH        kuscia 分支（默认：main）
-#   SECRETFLOW_BRANCH    secretflow 分支（默认：main）
+#   SECRETPAD_REPO             secretpad 仓库地址（默认：https://github.com/fengzhizi319/secretpad.git）
+#   KUSCIA_REPO                kuscia 仓库地址（默认：https://github.com/fengzhizi319/kuscia.git）
+#   SECRETFLOW_REPO            secretflow 仓库地址（默认：https://github.com/fengzhizi319/secretflow.git）
+#   PRIVACY_JAVA_REPO          privacy-java-sdk 仓库地址（默认：https://github.com/fengzhizi319/privacy-java-sdk.git）
+#   PRIVACY_GO_REPO            privacy-go-sdk 仓库地址（默认：https://github.com/fengzhizi319/privacy-go-sdk.git）
+#   PRIVACY_LOCAL_AGENT_REPO   privacy-local-agent 仓库地址（默认：https://github.com/fengzhizi319/privacy-local-agent.git）
+#   SECRETPAD_BRANCH           secretpad 分支（默认：main）
+#   KUSCIA_BRANCH              kuscia 分支（默认：main）
+#   SECRETFLOW_BRANCH          secretflow 分支（默认：main）
+#   PRIVACY_JAVA_BRANCH        privacy-java-sdk 分支（默认：main）
+#   PRIVACY_GO_BRANCH          privacy-go-sdk 分支（默认：main）
+#   PRIVACY_LOCAL_AGENT_BRANCH privacy-local-agent 分支（默认：main）
 # ============================================================================
 
 # Bash 严格模式：
@@ -91,11 +100,17 @@ fi
 SECRETPAD_REPO="${SECRETPAD_REPO:-${BASE_URL}/secretpad.git}"
 KUSCIA_REPO="${KUSCIA_REPO:-${BASE_URL}/kuscia.git}"
 SECRETFLOW_REPO="${SECRETFLOW_REPO:-${BASE_URL}/secretflow.git}"
+PRIVACY_JAVA_REPO="${PRIVACY_JAVA_REPO:-${BASE_URL}/privacy-java-sdk.git}"
+PRIVACY_GO_REPO="${PRIVACY_GO_REPO:-${BASE_URL}/privacy-go-sdk.git}"
+PRIVACY_LOCAL_AGENT_REPO="${PRIVACY_LOCAL_AGENT_REPO:-${BASE_URL}/privacy-local-agent.git}"
 
 # 分支名：同样支持环境变量覆盖。
 SECRETPAD_BRANCH="${SECRETPAD_BRANCH:-main}"
 KUSCIA_BRANCH="${KUSCIA_BRANCH:-main}"
 SECRETFLOW_BRANCH="${SECRETFLOW_BRANCH:-main}"
+PRIVACY_JAVA_BRANCH="${PRIVACY_JAVA_BRANCH:-main}"
+PRIVACY_GO_BRANCH="${PRIVACY_GO_BRANCH:-main}"
+PRIVACY_LOCAL_AGENT_BRANCH="${PRIVACY_LOCAL_AGENT_BRANCH:-main}"
 
 # ------------------------------------------------------------------
 # 克隆/更新单个仓库
@@ -158,10 +173,13 @@ log_info "sfwork 根目录：$SFWORK_ROOT"
 # 命令替换 $([ "$USE_SSH" = true ] && echo SSH || echo HTTPS) 动态选择显示文本。
 log_info "使用协议：$([ "$USE_SSH" = true ] && echo SSH || echo HTTPS)"
 
-# 依次处理三个子项目。调用顺序不影响结果，但通常按 secretpad -> kuscia -> secretflow 进行。
-clone_or_update "$SECRETPAD_REPO"   "$SFWORK_ROOT/secretpad"   "$SECRETPAD_BRANCH"
-clone_or_update "$KUSCIA_REPO"      "$SFWORK_ROOT/kuscia"      "$KUSCIA_BRANCH"
-clone_or_update "$SECRETFLOW_REPO"  "$SFWORK_ROOT/secretflow"  "$SECRETFLOW_BRANCH"
+# 依次处理所有子项目。调用顺序不影响结果，但通常按 secretpad -> kuscia -> secretflow -> privacy-* 进行。
+clone_or_update "$SECRETPAD_REPO"           "$SFWORK_ROOT/secretpad"           "$SECRETPAD_BRANCH"
+clone_or_update "$KUSCIA_REPO"              "$SFWORK_ROOT/kuscia"              "$KUSCIA_BRANCH"
+clone_or_update "$SECRETFLOW_REPO"          "$SFWORK_ROOT/secretflow"          "$SECRETFLOW_BRANCH"
+clone_or_update "$PRIVACY_JAVA_REPO"        "$SFWORK_ROOT/privacy-java-sdk"    "$PRIVACY_JAVA_BRANCH"
+clone_or_update "$PRIVACY_GO_REPO"          "$SFWORK_ROOT/privacy-go-sdk"      "$PRIVACY_GO_BRANCH"
+clone_or_update "$PRIVACY_LOCAL_AGENT_REPO" "$SFWORK_ROOT/privacy-local-agent" "$PRIVACY_LOCAL_AGENT_BRANCH"
 
 # echo "" 输出空行，提升最终提示的可读性。
 echo ""

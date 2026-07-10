@@ -9,7 +9,7 @@
 - **统一原语抽象**：差分隐私（DP）、K-匿名、脱敏、查询混淆四种技术使用同一套 `PrivacyPrimitive` 抽象。
 - **双模执行**：同一原语既能以 SecretFlow 组件方式跑在 DataMesh/Kuscia 上处理整表，也能以本地 SDK/函数方式被业务系统调用处理单条数据。
 - **参数可治理**：参数来源可组合、可审计、可版本化；默认自动推荐，高级用户可手动覆盖。
-- **多语言、多格式**：本地接口优先 Python，同时暴露 REST/gRPC 服务供 Java/Go/C++ 等语言调用；支持 JSON、dict、pandas、Apache Arrow、SQL 结果集。
+- **多语言、多格式**：本地接口优先Java/go/Python，同时暴露 REST/gRPC 服务供 Java/Go/C++ 等语言调用；支持 JSON、dict、pandas、Apache Arrow、SQL 结果集。
 
 ## 2. 操作对象抽象
 
@@ -273,11 +273,38 @@ flowchart LR
 | 语言 | 接入方式 | 说明 |
 |---|---|---|
 | Python | 原生 SDK | 直接调用 `secretflow.privacy.local` |
-| Java / Go / Rust | REST/gRPC 调用本地 Agent | Agent 可用 Python 实现，轻量 Sidecar |
+| **Java** | **本地 SDK（函数库）** | 作为 Maven 依赖引入，直接实例化 `PrivacyClient` 调用；避免 Agent 并发与网络问题 |
+| **Go** | **本地 SDK（函数库）** | 作为 Go module 引入，直接调用包函数；避免 Agent 并发与网络问题 |
+| Rust / C++ | REST/gRPC 调用本地 Agent | Agent 可用 Python/Go 实现，轻量 Sidecar |
 | JavaScript / TS | HTTP API | 前端实时脱敏展示 |
-| C++ | gRPC + Arrow | 高性能本地处理 |
+| Rust / C++ | gRPC + Arrow | 高性能本地处理 |
 
-### 5.3 本地 Agent 设计
+### 5.3 Java/Go SDK 与 Agent 的选型对比
+
+考虑到 sfwork 后端技术栈以 Java/Go 为主，本地模式优先提供 **Java SDK** 与 **Go SDK**，可直接以函数库形式集成到实际业务应用，无需网络请求，也无需考虑 Agent 的并发与运维问题。
+
+| 维度 | Java/Go SDK（函数库） | 本地 Agent（REST/gRPC） |
+|---|---|---|
+| 调用方式 | 进程内函数调用 | 本地网络调用 |
+| 延迟 | 极低（μs ~ ms 级） | 较低（ms 级） |
+| 并发 | 由业务应用自行管理，无跨进程开销 | 需要 Agent 端处理连接池、限流、并发 |
+| 部署 | 随业务 JAR/二进制一起打包 | 独立进程/容器，需运维 |
+| 适用场景 | Java/Go 后端业务直接集成 | 多语言、前端、不可引入 SDK 的遗留系统 |
+| 数据安全 | 数据不出进程 | 数据通过 localhost 传输，需 TLS/mTLS 可选 |
+
+### 5.4 本地 Agent 并发设计要点
+
+若采用本地 Agent 模式，必须考虑：
+
+- **连接池与 Keep-Alive**：业务应用复用 HTTP/2 或 gRPC 连接，避免频繁建连。
+- **限流与熔断**：对 DP、K-匿名等计算密集型操作做 QPS/并发限制；隐私预算耗尽时快速失败。
+- **请求隔离**：按 `namespace/project` 隔离请求上下文，防止参数与预算串扰。
+- **线程/协程安全**：预算台账、配置缓存使用锁或原子操作。
+- **健康检查与优雅关闭**：提供 `/health` 接口，支持 SIGTERM 优雅关闭。
+
+Java/Go SDK 由于在同进程内执行，天然避免上述问题，由调用方线程模型直接复用。
+
+### 5.5 本地 Agent 设计
 
 ```
 ┌─────────────────────────────────────────┐

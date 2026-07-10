@@ -1,0 +1,59 @@
+name: sfwork CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  bash-syntax:
+    name: Bash Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bash syntax for all scripts
+        run: |
+          set -euo pipefail
+          for f in scripts/*.sh; do
+            echo "Checking $f"
+            bash -n "$f"
+          done
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: |
+          find scripts -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
+
+  env-consistency:
+    name: .env.example Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check .env.example variables are referenced in scripts
+        run: |
+          set -euo pipefail
+          vars=$(grep -oE '^[A-Z_][A-Z0-9_]*=' .env.example | sed 's/=$//' | sort -u)
+          missing=0
+          for v in $vars; do
+            if ! grep -Rq --include='*.sh' "\b$v\b" scripts/; then
+              echo "ERROR: $v from .env.example is not referenced in scripts/"
+              missing=1
+            fi
+          done
+          exit $missing
+
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli@0.41.0
+      - name: Run markdownlint
+        run: markdownlint --config .markdownlint.json '**/*.md'

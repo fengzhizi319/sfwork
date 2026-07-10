@@ -272,14 +272,104 @@ def obfuscate_query(
     ).data
 ```
 
-## 5. 本地 Agent 实现建议
+## 5. Java 本地 SDK 实现建议
 
-使用 FastAPI 提供 REST，gRPC 可选：
+### 5.1 模块结构
+
+```textnprivacy-java-sdk/
+├── pom.xml
+├── src/main/java/com/secretflow/privacy/sdk/
+│   ├── PrivacyClient.java
+│   ├── PrivacyProfile.java
+│   ├── api/
+│   │   ├── DpApi.java
+│   │   ├── KAnonymityApi.java
+│   │   ├── MaskingApi.java
+│   │   └── QolApi.java
+│   ├── model/
+│   │   ├── PrivacyRequest.java
+│   │   ├── PrivacyResult.java
+│   │   └── ParameterBundle.java
+│   ├── exception/
+│   │   ├── PrivacyException.java
+│   │   └── PrivacyBudgetExhaustedException.java
+│   └── util/
+│       ├── ParameterResolver.java
+│       └── BudgetAccountant.java
+└── src/test/java/...
+```
+
+### 5.2 调用示例
+
+```java
+PrivacyProfile profile = PrivacyProfile.fromYaml("privacy-profile.yaml");
+PrivacyClient client = new PrivacyClient(profile);
+
+String masked = client.masking().maskValue("mobile", "13812345678", "doctor_query");
+
+List<Double> values = Arrays.asList(1.0, 0.0, 1.0, 1.0);
+double noisyCount = client.dp().count(values, 1.0, "laplace");
+
+Map<String, Object> record = Map.of(
+    "age", 28, "zipcode", "518057", "gender", "女", "disease", "胃癌"
+);
+Map<String, Object> anon = client.kAnonymity().anonymizeRecord(
+    record, List.of("age", "zipcode", "gender"), hierarchies, 5
+);
+
+List<String> dummies = client.qol().obfuscateQuery("糖尿病患者用药趋势", 3, "diabetes");
+```
+
+## 6. Go 本地 SDK 实现建议
+
+### 6.1 模块结构
+
+```textnprivacy-go-sdk/
+├── go.mod
+├── client.go
+├── profile.go
+├── dp.go
+├── kano.go
+├── masking.go
+├── qol.go
+├── models.go
+├── budget.go
+└── *_test.go
+```
+
+### 6.2 调用示例
+
+```go
+client, _ := privacy.NewClientFromFile("privacy-profile.yaml")
+
+masked, _ := client.MaskValue("mobile", "13812345678", "doctor_query")
+
+values := []float64{1, 0, 1, 1}
+noisyCount, _ := client.DPCount(values, 1.0, "laplace")
+
+record := map[string]any{"age": 28, "zipcode": "518057", "gender": "女"}
+anon, _ := client.KAnonymizeRecord(record, []string{"age", "zipcode", "gender"}, hierarchies, 5)
+
+dummies, _ := client.ObfuscateQuery("糖尿病患者用药趋势", 3, "diabetes")
+```
+
+## 7. 本地 Agent（REST/gRPC）实现建议
+
+Agent 适用于无法引入 Java/Go SDK 的场景，需要单独处理请求并发。
+
+### 7.1 技术选型
+
+- Python + FastAPI（REST）
+- Python + grpcio（gRPC）
+- 部署：本地进程 / Docker Sidecar / K8s DaemonSet
+
+### 7.2 REST 接口示例
 
 ```python
-# secretflow/privacy/local/agent/main.py
-from fastapi import FastAPI
+# privacy-local-agent/agent/main.py
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
+import uvicorn
 
 from secretflow.privacy.local.api import mask_value, dp_count, k_anonymize_record, obfuscate_query
 
@@ -292,9 +382,7 @@ class MaskRequest(BaseModel):
 
 @app.post("/v1/privacy/mask")
 def mask(req: MaskRequest):
-    return {
-        "result": mask_value(req.field_name, req.value, context=req.context),
-    }
+    return {"result": mask_value(req.field_name, req.value, context=req.context)}
 
 class DpRequest(BaseModel):
     values: list
@@ -307,15 +395,56 @@ def dp_count_api(req: DpRequest):
     return {"result": dp_count(req.values, req.epsilon, req.mechanism, req.context)}
 
 # 类似地封装 k_anonymize、obfuscate_query
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8079)
 ```
+
+### 7.3 gRPC 接口定义
+
+```protobuf
+syntax = "proto3";
+package privacy.local;
+
+service PrivacyService {
+  rpc Mask (MaskRequest) returns (MaskResponse);
+  rpc DPCount (DPRequest) returns (DPResponse);
+  rpc KAnonymizeRecord (KAnonymizeRequest) returns (KAnonymizeResponse);
+  rpc ObfuscateQuery (QolRequest) returns (QolResponse);
+}
+
+message MaskRequest {
+  string field_name = 1;
+  string value = 2;
+  map<string, string> context = 3;
+}
+
+message MaskResponse {
+  string result = 1;
+}
+
+// DP/K-Anon/QOL 请求响应类似
+```
+
+### 7.4 并发与稳定性设计
+
+- **连接池**：HTTP/2 + gRPC 长连接；业务侧使用连接池。
+- **限流**：FastAPI 中间件或 gRPC interceptor 实现 QPS/并发限制。
+- **隐私预算并发锁**：使用 `asyncio.Lock` 或线程锁保护预算台账。
+- **超时与熔断**：单请求超时 5s，Agent 过载时返回 503 触发客户端降级。
+- **优雅关闭**：监听 SIGTERM，停止接收新请求并等待处理中请求完成。
 
 启动方式：
 
 ```bash
-sf-privacy agent --port 8079 --profile ./privacy-profile.yaml
+sf-privacy agent --port 8079 --profile ./privacy-profile.yaml --max-concurrency 100
 ```
 
-## 6. SecretFlow 批量组件集成建议
+## 8. SecretFlow 批量组件集成建议
 
 ### 6.1 K-匿名组件示例
 
@@ -382,7 +511,7 @@ parameters:
     type: json
 ```
 
-## 7. 数据格式适配器建议
+## 9. 数据格式适配器建议
 
 ```python
 # secretflow/privacy/core/input_adapter.py
@@ -409,7 +538,7 @@ class PrivacyInputAdapter:
         raise TypeError(f"Unsupported input type: {type(data)}")
 ```
 
-## 8. 隐私预算台账建议
+## 10. 隐私预算台账建议
 
 ```python
 # secretflow/privacy/core/budget_accountant.py
@@ -437,7 +566,7 @@ class PrivacyBudgetAccountant:
         }
 ```
 
-## 9. 测试策略
+## 11. 测试策略
 
 | 测试类型 | 内容 |
 |---|---|
@@ -448,7 +577,7 @@ class PrivacyBudgetAccountant:
 | 预算测试 | 预算耗尽时正确拒绝 |
 | 性能测试 | 本地单值 P99 < 50ms，批量 10 万行 < 30s |
 
-## 10. 落地路线图
+## 12. 落地路线图
 
 | 阶段 | 目标 |
 |---|---|

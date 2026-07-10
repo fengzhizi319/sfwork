@@ -11,6 +11,11 @@
 /secretpad/
 /secretpad-frontend/
 
+# 本地隐私 SDK / Agent（已拆分为独立仓库）
+/privacy-java-sdk/
+/privacy-go-sdk/
+/privacy-local-agent/
+
 # Kuscia 本地运行时数据
 /.local-kuscia/
 

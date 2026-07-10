@@ -69,20 +69,40 @@
 - 输入支持 dict、pandas Series/DataFrame、JSON、Arrow。
 - 输出保持与输入同格式。
 
-#### FR-L2 本地 Agent
+#### FR-L2 Java 本地 SDK
+- 提供 Maven 依赖 `sfwork-privacy-java-sdk`。
+- 入口类 `PrivacyClient`，支持链式或函数式调用：
+  ```java
+  PrivacyClient client = new PrivacyClient(PrivacyProfile.load("privacy-profile.yaml"));
+  String masked = client.masking().maskValue("mobile", "13812345678", "doctor_query");
+  double noisyCount = client.dp().count(values, 1.0, "laplace");
+  Map<String, Object> anonRecord = client.kAnonymity().anonymizeRecord(record, qiCols, hierarchies, 5);
+  List<String> dummies = client.qol().obfuscateQuery("糖尿病患者用药趋势", 3, "diabetes");
+  ```
+- 支持参数模板加载、上下文解析、隐私预算本地台账。
+- 零网络依赖，随业务应用 JAR 一起打包。
+
+#### FR-L3 Go 本地 SDK
+- 提供 Go module `github.com/secretflow/sfwork-privacy-go-sdk`。
+- 包级函数或客户端调用：
+  ```go
+  client := privacy.NewClientFromFile("privacy-profile.yaml")
+  masked, _ := client.MaskValue("mobile", "13812345678", "doctor_query")
+  noisy, _ := client.DPCount(values, 1.0, "laplace")
+  anon, _ := client.KAnonymizeRecord(record, qiCols, hierarchies, 5)
+  dummies, _ := client.ObfuscateQuery("糖尿病患者用药趋势", 3, "diabetes")
+  ```
+- 与 Java SDK 能力对齐，同样零网络依赖。
+
+#### FR-L4 本地 Agent（REST/gRPC）
 - 提供可选的 `Local Privacy Agent`：
   - REST API：`POST /v1/privacy/mask`、`POST /v1/privacy/dp`、`POST /v1/privacy/k_anonymize`、`POST /v1/privacy/obfuscate_query`。
   - gRPC：`PrivacyService`。
-  - 支持策略热加载、参数缓存、审计日志落盘。
+  - 支持策略热加载、参数缓存、审计日志落盘、并发限流、连接 Keep-Alive。
 - Agent 默认监听 `127.0.0.1:8079`，不出本机。
+- 适用于前端、多语言遗留系统或无法引入 SDK 的场景。
 
-#### FR-L3 多语言客户端
-- 提供 Java/Go 客户端示例或 SDK：
-  - `PrivacyClient client = PrivacyClient.create("http://127.0.0.1:8079");`
-  - `client.mask("id_card", "110105...", "doctor_query");`
-- 提供 OpenAPI 文档（Swagger / gRPC reflection）。
-
-#### FR-L4 本地调试与预览
+#### FR-L5 本地调试与预览
 - 提供 CLI 工具：
   - `sf-privacy mask --field id_card --value ... --context doctor_query`
   - `sf-privacy k-anon --input record.json --profile profile.yaml`
