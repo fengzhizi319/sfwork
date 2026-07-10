@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecretPad 高保真原型</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">SP</div>
+      <span>SecretPad 隐私计算平台</span>
+    </div>
+    <div class="header-right">
+      <div class="bell">🔔<span class="badge">3</span></div>
+      <div class="user">
+        <div class="avatar">A</div>
+        <span>admin</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-item active" data-target="dashboard">📊 Dashboard</div>
+      <div class="nav-item" data-target="projects">📁 项目管理</div>
+      <div class="nav-item" data-target="nodes">🖥️ 节点管理</div>
+      <div class="nav-item" data-target="data-sources">🗂️ 数据源</div>
+      <div class="nav-item" data-target="data-tables">🗃️ 数据表</div>
+      <div class="nav-item" data-target="dag">🧩 DAG 画布</div>
+      <div class="nav-item" data-target="messages">✉️ 消息中心</div>
+      <div class="nav-item" data-target="models">🤖 模型管理</div>
+      <div class="nav-item" data-target="results">📥 结果管理</div>
+    </aside>
+
+    <main class="main">
+      <!-- Dashboard -->
+      <section id="dashboard" class="section active">
+        <div class="page-title">Dashboard</div>
+        <div class="card-grid">
+          <div class="card stat-card">
+            <div class="stat-label">Projects</div>
+            <div class="stat-value">128</div>
+            <div class="stat-trend">↑ 12% 较上月</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Nodes</div>
+            <div class="stat-value">12</div>
+            <div class="stat-trend">— 持平</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Data Tables</div>
+            <div class="stat-value">356</div>
+            <div class="stat-trend">↑ 5% 较上月</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Graphs</div>
+            <div class="stat-value">89</div>
+            <div class="stat-trend">↑ 8% 较上月</div>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="card" style="min-height:220px;">
+            <div style="font-weight:500;margin-bottom:16px;">Recent Projects</div>
+            <div style="margin-bottom:12px;">反欺诈联邦建模 <span style="color:var(--text-secondary);float:right;">2024-01-15</span></div>
+            <div style="margin-bottom:12px;">广告联合统计 <span style="color:var(--text-secondary);float:right;">2024-01-14</span></div>
+            <div style="margin-bottom:12px;">医疗数据 TEE 计算 <span style="color:var(--text-secondary);float:right;">2024-01-13</span></div>
+            <div>金融风控建模 <span style="color:var(--text-secondary);float:right;">2024-01-12</span></div>
+          </div>
+          <div class="card" style="min-height:220px;">
+            <div style="font-weight:500;margin-bottom:16px;">Recent Nodes</div>
+            <div style="margin-bottom:12px;">alice <span class="tag tag-green">Healthy</span></div>
+            <div style="margin-bottom:12px;">bob <span class="tag tag-green">Healthy</span></div>
+            <div style="margin-bottom:12px;">tee <span class="tag tag-orange">Warning</span></div>
+            <div>charlie <span class="tag tag-green">Healthy</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-weight:500;margin-bottom:16px;">System Health</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>CPU</span><span>45%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Memory</span><span>60%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Disk</span><span>75%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Network</span><span>OK</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:90%;background:var(--success)"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Projects -->
+      <section id="projects" class="section">
+        <div class="page-title">项目管理</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索项目..." />
+            <select><option>计算模式</option><option>MPC 管道</option><option>TEE 枢纽</option></select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openDrawer('drawer-project')">+ 创建项目</button>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">反欺诈联邦建模</span>
+              <span class="tag tag-blue">MPC 管道</span>
+            </div>
+            <div style="color:var(--text-secondary);margin-bottom:8px;">参与节点: 3 &nbsp; 训练流: 5 &nbsp; 任务: 12</div>
+            <div style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">2024-01-15</div>
+            <div class="actions">
+              <button class="btn btn-sm btn-primary">进入</button>
+              <button class="btn btn-sm">编辑</button>
+              <button class="btn btn-sm btn-danger">删除</button>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">广告联合统计</span>
+              <span class="tag tag-orange">TEE 枢纽</span>
+            </div>
+            <div style="color:var(--text-secondary);margin-bottom:8px;">参与节点: 2 &nbsp; 训练流: 2 &nbsp; 任务: 8</div>
+            <div style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">2024-01-10</div>
+            <div class="actions">
+              <button class="btn btn-sm btn-primary">进入</button>
+              <button class="btn btn-sm">编辑</button>
+              <button class="btn btn-sm btn-danger">删除</button>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">医疗数据 TEE 计算</span>
+              <span class="tag tag-blue">MPC 管道</span>
+            </div>
+            <div style="color:var(--text-secondary);margin-bottom:8px;">参与节点: 4 &nbsp; 训练流: 1 &nbsp; 任务: 6</div>
+            <div style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">2024-01-08</div>
+            <div class="actions">
+              <button class="btn btn-sm btn-primary">进入</button>
+              <button class="btn btn-sm">编辑</button>
+              <button class="btn btn-sm btn-danger">删除</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Nodes -->
+      <section id="nodes" class="section">
+        <div class="page-title">节点管理</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索节点..." />
+            <select><option>节点类型</option><option>MPC</option><option>TEE</option></select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openDrawer('drawer-node')">+ 新增节点</button>
+            <button class="btn">刷新</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Node ID</th><th>Name</th><th>Address</th><th>Type</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>alice</td><td>Alice</td><td>127.0.0.1:8083</td><td>MPC</td><td><span class="tag tag-green">Healthy</span></td>
+              <td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td>
+            </tr>
+            <tr>
+              <td>bob</td><td>Bob</td><td>127.0.0.1:8084</td><td>MPC</td><td><span class="tag tag-green">Healthy</span></td>
+              <td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td>
+            </tr>
+            <tr>
+              <td>tee</td><td>TEE Hub</td><td>127.0.0.1:8085</td><td>TEE</td><td><span class="tag tag-green">Healthy</span></td>
+              <td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Data Sources -->
+      <section id="data-sources" class="section">
+        <div class="page-title">数据源</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索数据源..." />
+            <select><option>类型</option><option>MySQL</option><option>OSS</option><option>ODPS</option><option>HTTP</option></select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openDrawer('drawer-datasource')">+ 新增数据源</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>Type</th><th>Created</th><th>Modified</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>mysql_1</td><td>MySQL</td><td>2024-01-15</td><td>2024-01-20</td><td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td></tr>
+            <tr><td>oss_1</td><td>OSS</td><td>2024-01-10</td><td>2024-01-10</td><td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td></tr>
+            <tr><td>http_api</td><td>HTTP</td><td>2024-01-08</td><td>2024-01-08</td><td class="actions"><button class="btn btn-sm">Edit</button><button class="btn btn-sm btn-danger">Delete</button></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Data Tables -->
+      <section id="data-tables" class="section">
+        <div class="page-title">数据表</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索数据表..." />
+            <select><option>节点</option><option>alice</option><option>bob</option></select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openDrawer('drawer-datatable')">+ 新增数据表</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>Data Source</th><th>Node</th><th>Description</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>user</td><td>local_csv</td><td>alice</td><td>用户特征</td><td><span class="tag tag-green">Available</span></td><td class="actions"><button class="btn btn-sm">授权</button><button class="btn btn-sm btn-danger">Delete</button></td></tr>
+            <tr><td>order</td><td>mysql_1</td><td>bob</td><td>订单表</td><td><span class="tag tag-green">Available</span></td><td class="actions"><button class="btn btn-sm">授权</button><button class="btn btn-sm btn-danger">Delete</button></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- DAG -->
+      <section id="dag" class="section">
+        <div class="page-title">DAG 画布 · 反欺诈联邦建模</div>
+        <div class="tabs">
+          <div class="tab">项目数据</div>
+          <div class="tab active">模型训练</div>
+          <div class="tab">模型管理</div>
+          <div class="tab">周期任务</div>
+        </div>
+        <div class="dag-toolbar">
+          <button class="btn btn-primary">▶ 运行</button>
+          <button class="btn">⏹ 停止</button>
+          <button class="btn">💾 保存</button>
+          <button class="btn">↩ 撤销</button>
+          <button class="btn">↪ 重做</button>
+          <button class="btn">⛶ 适应</button>
+          <button class="btn">+ 放大</button>
+          <button class="btn">- 缩小</button>
+          <button class="btn" style="margin-left:auto;">🚀 模型提交</button>
+        </div>
+        <div class="dag-canvas">
+          <div class="dag-node success" style="top:80px;left:80px;">
+            <div class="dag-node-title">读数据</div>
+            <div class="dag-node-sub">user</div>
+          </div>
+          <div class="dag-node success" style="top:80px;left:300px;">
+            <div class="dag-node-title">特征工程</div>
+            <div class="dag-node-sub">FeatureFilter</div>
+          </div>
+          <div class="dag-node running" style="top:240px;left:190px;">
+            <div class="dag-node-title">联邦训练</div>
+            <div class="dag-node-sub">SSGLM</div>
+          </div>
+          <div class="dag-node" style="top:240px;left:410px;">
+            <div class="dag-node-title">模型评估</div>
+            <div class="dag-node-sub">Evaluation</div>
+          </div>
+          <div class="dag-edge" style="top:125px;left:220px;width:80px;transform:rotate(0deg);"></div>
+          <div class="dag-edge" style="top:160px;left:360px;width:90px;transform:rotate(60deg);"></div>
+          <div class="dag-edge" style="top:185px;left:270px;width:90px;transform:rotate(90deg);"></div>
+        </div>
+      </section>
+
+      <!-- Messages -->
+      <section id="messages" class="section">
+        <div class="page-title">消息中心</div>
+        <div class="tabs">
+          <div class="tab active">我处理的</div>
+          <div class="tab">我发起的</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select><option>消息类型</option><option>项目邀约</option><option>数据授权</option><option>节点合作</option><option>TEE 下载</option></select>
+            <select><option>状态</option><option>待处理</option><option>已同意</option><option>已拒绝</option></select>
+            <input type="text" placeholder="搜索..." />
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>标题</th><th>发起方</th><th>接收方</th><th>时间</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>邀请你加入项目 A</td><td>Alice</td><td>Bob</td><td>2024-01-15</td><td><span class="tag tag-blue">待处理</span></td>
+              <td class="actions"><button class="btn btn-sm btn-primary" onclick="openDrawer('drawer-message')">同意</button><button class="btn btn-sm btn-danger">拒绝</button></td>
+            </tr>
+            <tr>
+              <td>请求授权数据表 user</td><td>Bob</td><td>Alice</td><td>2024-01-14</td><td><span class="tag tag-green">已同意</span></td>
+              <td class="actions"><button class="btn btn-sm">查看</button></td>
+            </tr>
+            <tr>
+              <td>TEE 结果下载审批</td><td>Bob</td><td>Alice</td><td>2024-01-12</td><td><span class="tag tag-blue">待处理</span></td>
+              <td class="actions"><button class="btn btn-sm btn-primary">同意</button><button class="btn btn-sm btn-danger">拒绝</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Models -->
+      <section id="models" class="section">
+        <div class="page-title">模型管理</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索模型..." />
+            <select><option>状态</option><option>待发布</option><option>已发布</option><option>已下线</option></select>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>ID</th><th>Description</th><th>Status</th><th>Submit Time</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>联邦 LR</td><td>m1</td><td>逻辑回归</td><td><span class="tag tag-green">已发布</span></td><td>2024-01-15</td><td class="actions"><button class="btn btn-sm">下线</button><button class="btn btn-sm">废弃</button><button class="btn btn-sm">删除</button><button class="btn btn-sm btn-primary">服务</button></td></tr>
+            <tr><td>XGB 反欺诈</td><td>m2</td><td>XGBoost</td><td><span class="tag tag-gray">待发布</span></td><td>2024-01-14</td><td class="actions"><button class="btn btn-sm btn-primary">发布</button><button class="btn btn-sm">废弃</button><button class="btn btn-sm">删除</button></td></tr>
+            <tr><td>NN 分类</td><td>m3</td><td>神经网络</td><td><span class="tag tag-red">发布失败</span></td><td>2024-01-13</td><td class="actions"><button class="btn btn-sm btn-primary">发布</button><button class="btn btn-sm">废弃</button><button class="btn btn-sm">删除</button></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Results -->
+      <section id="results" class="section">
+        <div class="page-title">结果管理</div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input type="text" placeholder="搜索结果..." />
+            <select><option>类型</option><option>规则</option><option>模型</option><option>表</option><option>报告</option></select>
+            <select><option>来源项目</option></select>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>结果 ID</th><th>类型</th><th>来源项目</th><th>训练流</th><th>节点</th><th>生成时间</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>r_001</td><td>模型</td><td>反欺诈联邦建模</td><td>g1</td><td>alice</td><td>2024-01-15</td><td class="actions"><button class="btn btn-sm btn-primary">下载</button><button class="btn btn-sm">详情</button></td></tr>
+            <tr><td>r_002</td><td>报告</td><td>反欺诈联邦建模</td><td>g1</td><td>bob</td><td>2024-01-15</td><td class="actions"><button class="btn btn-sm btn-primary">下载</button><button class="btn btn-sm">详情</button></td></tr>
+            <tr><td>r_003</td><td>表</td><td>广告联合统计</td><td>g2</td><td>tee</td><td>2024-01-14</td><td class="actions"><button class="btn btn-sm">下载</button><button class="btn btn-sm">详情</button></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <!-- Drawer: Create Project -->
+  <div class="drawer-overlay" id="drawer-project" onclick="closeDrawer('drawer-project')"></div>
+  <div class="drawer" id="drawer-project-el">
+    <div class="drawer-header">创建项目 <span style="cursor:pointer;" onclick="closeDrawer('drawer-project')">✕</span></div>
+    <div class="drawer-body">
+      <div class="form-item"><label class="form-label">项目名称 <span class="required">*</span></label><input class="form-input" placeholder="请输入项目名称" /></div>
+      <div class="form-item"><label class="form-label">项目描述</label><textarea class="form-textarea" placeholder="请输入项目描述"></textarea></div>
+      <div class="form-item"><label class="form-label">计算模式 <span class="required">*</span></label><select class="form-select"><option>MPC 管道</option><option>TEE 枢纽</option></select></div>
+      <div class="form-item"><label class="form-label">训练流模板</label><select class="form-select"><option>空模板</option><option>联邦 LR 模板</option><option>XGB 反欺诈模板</option></select></div>
+      <div class="form-item"><label class="form-label">参与节点 <span class="required">*</span></label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label><input type="checkbox" checked /> alice</label>
+          <label><input type="checkbox" checked /> bob</label>
+          <label><input type="checkbox" /> tee</label>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer"><button class="btn" onclick="closeDrawer('drawer-project')">取消</button><button class="btn btn-primary">创建</button></div>
+  </div>
+
+  <!-- Drawer: Create Node -->
+  <div class="drawer-overlay" id="drawer-node" onclick="closeDrawer('drawer-node')"></div>
+  <div class="drawer" id="drawer-node-el">
+    <div class="drawer-header">新增节点 <span style="cursor:pointer;" onclick="closeDrawer('drawer-node')">✕</span></div>
+    <div class="drawer-body">
+      <div class="form-item"><label class="form-label">节点 ID <span class="required">*</span></label><input class="form-input" placeholder="如 alice" /></div>
+      <div class="form-item"><label class="form-label">名称 <span class="required">*</span></label><input class="form-input" placeholder="节点显示名称" /></div>
+      <div class="form-item"><label class="form-label">通讯地址 <span class="required">*</span></label><input class="form-input" placeholder="host:port" /></div>
+      <div class="form-item"><label class="form-label">节点类型 <span class="required">*</span></label><select class="form-select"><option>MPC</option><option>TEE</option><option>MPC & TEE</option></select></div>
+      <div class="form-item"><label class="form-label">描述</label><textarea class="form-textarea"></textarea></div>
+      <div class="form-item"><label class="form-label">证书</label><textarea class="form-textarea" placeholder="PEM 格式证书"></textarea></div>
+      <div class="form-item"><label class="form-label">私钥</label><textarea class="form-textarea" placeholder="PEM 格式私钥"></textarea></div>
+    </div>
+    <div class="drawer-footer"><button class="btn" onclick="closeDrawer('drawer-node')">取消</button><button class="btn btn-primary">确定</button></div>
+  </div>
+
+  <!-- Drawer: Create Data Source -->
+  <div class="drawer-overlay" id="drawer-datasource" onclick="closeDrawer('drawer-datasource')"></div>
+  <div class="drawer" id="drawer-datasource-el">
+    <div class="drawer-header">新增数据源 <span style="cursor:pointer;" onclick="closeDrawer('drawer-datasource')">✕</span></div>
+    <div class="drawer-body">
+      <div class="form-item"><label class="form-label">名称 <span class="required">*</span></label><input class="form-input" /></div>
+      <div class="form-item"><label class="form-label">类型 <span class="required">*</span></label><select class="form-select"><option>MySQL</option><option>OSS</option><option>ODPS</option><option>HTTP</option><option>LOCAL</option></select></div>
+      <div class="form-item"><label class="form-label">Definition (JSON) <span class="required">*</span></label><textarea class="form-textarea" rows="8" placeholder='{"host":"...","port":3306,"database":"..."}'></textarea></div>
+    </div>
+    <div class="drawer-footer"><button class="btn" onclick="closeDrawer('drawer-datasource')">取消</button><button class="btn btn-primary">确定</button></div>
+  </div>
+
+  <!-- Drawer: Create Data Table -->
+  <div class="drawer-overlay" id="drawer-datatable" onclick="closeDrawer('drawer-datatable')"></div>
+  <div class="drawer" id="drawer-datatable-el">
+    <div class="drawer-header">新增数据表 <span style="cursor:pointer;" onclick="closeDrawer('drawer-datatable')">✕</span></div>
+    <div class="drawer-body">
+      <div class="form-item"><label class="form-label">数据表名称 <span class="required">*</span></label><input class="form-input" /></div>
+      <div class="form-item"><label class="form-label">数据源 <span class="required">*</span></label><select class="form-select"><option>local_csv</option><option>mysql_1</option></select></div>
+      <div class="form-item"><label class="form-label">所属节点 <span class="required">*</span></label><select class="form-select"><option>alice</option><option>bob</option></select></div>
+      <div class="form-item"><label class="form-label">描述</label><textarea class="form-textarea"></textarea></div>
+      <div class="form-item"><label class="form-label">Schema (JSON) <span class="required">*</span></label><textarea class="form-textarea" rows="6" placeholder='[{"name":"id","type":"int"}]'></textarea></div>
+    </div>
+    <div class="drawer-footer"><button class="btn" onclick="closeDrawer('drawer-datatable')">取消</button><button class="btn btn-primary">确定</button></div>
+  </div>
+
+  <!-- Drawer: Message Detail -->
+  <div class="drawer-overlay" id="drawer-message" onclick="closeDrawer('drawer-message')"></div>
+  <div class="drawer" id="drawer-message-el">
+    <div class="drawer-header">消息详情 <span style="cursor:pointer;" onclick="closeDrawer('drawer-message')">✕</span></div>
+    <div class="drawer-body">
+      <div class="form-item"><label class="form-label">类型</label><div>项目邀约</div></div>
+      <div class="form-item"><label class="form-label">发起方</label><div>Alice</div></div>
+      <div class="form-item"><label class="form-label">接收方</label><div>Bob</div></div>
+      <div class="form-item"><label class="form-label">时间</label><div>2024-01-15 10:00</div></div>
+      <div class="form-item"><label class="form-label">投票进度</label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>Alice <span class="tag tag-green">已同意</span></div>
+          <div>Bob <span class="tag tag-blue">待处理</span></div>
+          <div>Charlie <span class="tag tag-green">已同意</span></div>
+        </div>
+      </div>
+      <div class="form-item"><label class="form-label">拒绝理由</label><textarea class="form-textarea" placeholder="拒绝时必填"></textarea></div>
+    </div>
+    <div class="drawer-footer"><button class="btn btn-danger" onclick="closeDrawer('drawer-message')">拒绝</button><button class="btn btn-primary">同意</button></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
