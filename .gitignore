@@ -38,3 +38,6 @@ __pycache__/
 
 # 备份文件
 *.bak
+
+# 本地环境变量配置（由 .env.example 复制生成）
+.env

@@ -24,8 +24,26 @@
 #   -o pipefail: 管道中任一命令失败则整个管道失败
 set -euo pipefail
 
-# SFWORK_ROOT: sfwork 工作区根目录
-SFWORK_ROOT="/home/charles/code/sfwork"
+# ------------------------------------------------------------------
+# 全局路径与变量
+# ------------------------------------------------------------------
+# SFWORK_ROOT: sfwork 工作区根目录，根据本脚本所在位置自动推导
+# 本脚本位于 sfwork/scripts/ 下，因此根目录为其父目录
+SFWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ------------------------------------------------------------------
+# 从 .env 文件加载环境变量配置
+# ------------------------------------------------------------------
+# DEV_START_ENV_FILE: 可自定义 env 文件路径，默认读取 sfwork 根目录的 .env
+# 使用 set -a / set +a 让 .env 中定义的所有变量自动 export 到当前 shell
+DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$SFWORK_ROOT/.env}"
+if [ -f "$DEV_START_ENV_FILE" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$DEV_START_ENV_FILE"
+    set +a
+    echo "[INFO] 已加载环境变量配置：$DEV_START_ENV_FILE"
+fi
 
 # LOG_DIR: 与 dev-start.sh 保持一致，PID 文件存放目录
 LOG_DIR="$SFWORK_ROOT/logs"
