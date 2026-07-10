@@ -32,6 +32,8 @@
       <div class="nav-item" data-target="messages">✉️ 消息中心</div>
       <div class="nav-item" data-target="models">🤖 模型管理</div>
       <div class="nav-item" data-target="results">📥 结果管理</div>
+      <div class="nav-item" data-target="privacy-scenes">🔒 隐私组件场景</div>
+      <div class="nav-item" data-target="login-demo">🔑 登录界面</div>
     </aside>
 
     <main class="main">
@@ -237,7 +239,7 @@
 
       <!-- DAG -->
       <section id="dag" class="section">
-        <div class="page-title">DAG 画布 · 反欺诈联邦建模</div>
+        <div class="page-title">DAG 画布 · <span id="dag-scenario-title">反欺诈联邦建模</span></div>
         <div class="tabs">
           <div class="tab">项目数据</div>
           <div class="tab active">模型训练</div>
@@ -245,6 +247,14 @@
           <div class="tab">周期任务</div>
         </div>
         <div class="dag-toolbar">
+          <select id="dag-scenario-select" class="btn" style="padding-right:24px;">
+            <option value="fraud">反欺诈联邦建模</option>
+            <option value="dp">差分隐私统计</option>
+            <option value="k anonymity">K-匿名脱敏</option>
+            <option value="classification">分类分级识别</option>
+            <option value="psi">隐私求交（PSI）</option>
+            <option value="secureAggregation">安全聚合</option>
+          </select>
           <button class="btn btn-primary">▶ 运行</button>
           <button class="btn">⏹ 停止</button>
           <button class="btn">💾 保存</button>
@@ -255,20 +265,20 @@
           <button class="btn">- 缩小</button>
           <button class="btn" style="margin-left:auto;">🚀 模型提交</button>
         </div>
-        <div class="dag-canvas">
-          <div class="dag-node success" style="top:80px;left:80px;">
+        <div class="dag-canvas" id="dag-canvas-area">
+          <div class="dag-node success" style="top:80px;left:80px;" data-role="node1">
             <div class="dag-node-title">读数据</div>
             <div class="dag-node-sub">user</div>
           </div>
-          <div class="dag-node success" style="top:80px;left:300px;">
+          <div class="dag-node success" style="top:80px;left:300px;" data-role="node2">
             <div class="dag-node-title">特征工程</div>
             <div class="dag-node-sub">FeatureFilter</div>
           </div>
-          <div class="dag-node running" style="top:240px;left:190px;">
+          <div class="dag-node running" style="top:240px;left:190px;" data-role="node3">
             <div class="dag-node-title">联邦训练</div>
             <div class="dag-node-sub">SSGLM</div>
           </div>
-          <div class="dag-node" style="top:240px;left:410px;">
+          <div class="dag-node" style="top:240px;left:410px;" data-role="node4">
             <div class="dag-node-title">模型评估</div>
             <div class="dag-node-sub">Evaluation</div>
           </div>
@@ -354,6 +364,98 @@
             <tr><td>r_003</td><td>表</td><td>广告联合统计</td><td>g2</td><td>tee</td><td>2024-01-14</td><td class="actions"><button class="btn btn-sm">下载</button><button class="btn btn-sm">详情</button></td></tr>
           </tbody>
         </table>
+      </section>
+
+      <!-- Privacy Scenarios -->
+      <section id="privacy-scenes" class="section">
+        <div class="page-title">隐私组件典型场景</div>
+        <div class="card-grid">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">差分隐私统计</span>
+              <span class="tag tag-blue">DP</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              在多方数据上添加 Laplace/Gaussian 噪声，实现 ε-差分隐私的聚合统计，保护个体记录不被反推。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">K-匿名脱敏</span>
+              <span class="tag tag-orange">K-Anon</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              对标识符与准标识符进行泛化与抑制，确保同一等价组内记录数 ≥ K，降低重识别风险。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">分类分级识别</span>
+              <span class="tag tag-green">Classification</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              自动识别数据表中的敏感字段，按机构/行业规范打标签（如 PII、机密、公开），生成数据分级报告。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">隐私求交（PSI）</span>
+              <span class="tag tag-blue">PSI</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              多方在不泄露非交集数据的前提下，计算 ID 集合的交集，常用于黑名单共享、联合营销。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">安全聚合</span>
+              <span class="tag tag-blue">SecAgg</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              联邦学习场景下对多方梯度/参数进行安全聚合，防止服务端看到单方原始梯度。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-weight:500;">安全分箱与 WO E</span>
+              <span class="tag tag-green">Binning</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+              多方联合计算特征分箱与证据权重（WOE），用于联邦风控评分卡建模。
+            </div>
+            <div class="actions"><button class="btn btn-sm btn-primary">查看 DAG</button><button class="btn btn-sm">文档</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Login Demo -->
+      <section id="login-demo" class="section">
+        <div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 120px);">
+          <div class="card" style="width:420px;padding:40px 32px;text-align:center;">
+            <div class="logo" style="margin:0 auto 20px;width:56px;height:56px;font-size:24px;border-radius:10px;">SP</div>
+            <div style="font-size:20px;font-weight:500;margin-bottom:8px;">SecretPad 隐私计算平台</div>
+            <div style="color:var(--text-secondary);margin-bottom:28px;">科技护航数据安全</div>
+            <div class="form-item" style="text-align:left;">
+              <label class="form-label">账号</label>
+              <input class="form-input" placeholder="请输入账号" />
+            </div>
+            <div class="form-item" style="text-align:left;">
+              <label class="form-label">密码</label>
+              <input class="form-input" type="password" placeholder="请输入密码" />
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;font-size:13px;">
+              <label><input type="checkbox" /> 记住我</label>
+              <a href="#" style="color:var(--primary);">忘记密码？</a>
+            </div>
+            <button class="btn btn-primary" style="width:100%;height:40px;justify-content:center;">登 录</button>
+            <div style="margin-top:16px;color:var(--error);font-size:13px;display:none;" id="login-error">账号或密码错误</div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
