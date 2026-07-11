@@ -806,6 +806,8 @@ start_backend() {
 
     # $! 保存最近一个后台进程的 PID;将其写入 PID 文件以便后续停止或检查
     echo $! > "$pidfile"
+    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收
+    disown $! 2>/dev/null || true
     log_info "后端进程已启动,pid $!"
     wait_for_port 127.0.0.1 8080 120 "后端 HTTP"
 }
@@ -845,6 +847,8 @@ start_frontend() {
     # --filter secretpad: 在 monorepo 中仅启动 secretpad 应用
     nohup corepack pnpm --filter secretpad dev > "$LOG_DIR/frontend.log" 2>&1 &
     echo $! > "$pidfile"
+    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收
+    disown $! 2>/dev/null || true
     log_info "前端进程已启动,pid $!"
     wait_for_port 127.0.0.1 8000 120 "前端开发服务器"
 }
