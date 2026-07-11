@@ -9,7 +9,8 @@
 #   当前 sfwork 根仓库只管理文档、配置和编排脚本；四大子项目及本地隐私 SDK/Agent 作为独立 git 仓库存在。
 #
 # 默认克隆的子项目：
-#   - secretpad             -> ./secretpad/   （包含前端 frontend-src/ 与后端）
+#   - secretpad             -> ./secretpad/           （SecretPad 后端）
+#   - secretpad-frontend    -> ./secretpad/frontend-src/ （SecretPad 前端，嵌套在 secretpad/ 下）
 #   - kuscia                -> ./kuscia/
 #   - secretflow            -> ./secretflow/
 #   - privacy-java-sdk      -> ./privacy-java-sdk/
@@ -17,22 +18,27 @@
 #   - privacy-local-agent   -> ./privacy-local-agent/
 #
 # 说明：
-#   - secretpad 已包含前端源码，因此无需单独克隆前端仓库。
+#   - secretpad 仓库本身只包含后端源码，前端源码在 secretpad-frontend 仓库，
+#     需要克隆到 ./secretpad/frontend-src/ 目录下（已被 secretpad/.gitignore 忽略）。
 #   - 如果目标目录已存在且是 git 仓库，脚本会执行 git pull 并切换到指定分支。
 #   - 如果目标目录已存在但不是一个 git 仓库，脚本会跳过并给出警告。
+#   - 单个仓库处理失败不会阻塞后续仓库的克隆/更新。
 #
 # 用法：
 #   bash scripts/clone-repos.sh              # 使用默认仓库和分支
 #   bash scripts/clone-repos.sh --ssh        # 使用 SSH 协议克隆
+#   bash scripts/clone-repos.sh --help       # 显示帮助信息
 #
 # 环境变量（均可选）：
 #   SECRETPAD_REPO             secretpad 仓库地址（默认：https://github.com/fengzhizi319/secretpad.git）
+#   SECRETPAD_FRONTEND_REPO    secretpad-frontend 仓库地址（默认：https://github.com/fengzhizi319/secretpad-frontend.git）
 #   KUSCIA_REPO                kuscia 仓库地址（默认：https://github.com/fengzhizi319/kuscia.git）
 #   SECRETFLOW_REPO            secretflow 仓库地址（默认：https://github.com/fengzhizi319/secretflow.git）
 #   PRIVACY_JAVA_REPO          privacy-java-sdk 仓库地址（默认：https://github.com/fengzhizi319/privacy-java-sdk.git）
 #   PRIVACY_GO_REPO            privacy-go-sdk 仓库地址（默认：https://github.com/fengzhizi319/privacy-go-sdk.git）
 #   PRIVACY_LOCAL_AGENT_REPO   privacy-local-agent 仓库地址（默认：https://github.com/fengzhizi319/privacy-local-agent.git）
 #   SECRETPAD_BRANCH           secretpad 分支（默认：main）
+#   SECRETPAD_FRONTEND_BRANCH  secretpad-frontend 分支（默认：main）
 #   KUSCIA_BRANCH              kuscia 分支（默认：main）
 #   SECRETFLOW_BRANCH          secretflow 分支（默认：main）
 #   PRIVACY_JAVA_BRANCH        privacy-java-sdk 分支（默认：main）
@@ -76,17 +82,35 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 
 # ------------------------------------------------------------------
+# 命令行参数
+# ------------------------------------------------------------------
+USE_SSH=false
+
+print_help() {
+    sed -n '2,40p' "$0" | sed 's/^# //; s/^#//'
+}
+
+# ${1:-} 是参数默认值展开：如果 $1 未定义，则返回空字符串。
+case "${1:-}" in
+    --ssh)
+        USE_SSH=true
+        ;;
+    --help|-h)
+        print_help
+        exit 0
+        ;;
+    "")
+        ;;
+    *)
+        log_error "未知参数：$1"
+        log_info "用法：$0 [--ssh|--help]"
+        exit 1
+        ;;
+esac
+
+# ------------------------------------------------------------------
 # 仓库配置
 # ------------------------------------------------------------------
-# USE_SSH：布尔标志，决定是否使用 SSH 协议克隆。
-# 默认 false，因为 HTTPS 在大多数新环境中无需配置 SSH key 即可使用。
-USE_SSH=false
-# ${1:-} 是参数默认值展开：如果 $1 未定义，则返回空字符串。
-# 这里判断第一个命令行参数是否为 --ssh，若是则切换为 SSH 方式。
-if [ "${1:-}" = "--ssh" ]; then
-    USE_SSH=true
-fi
-
 # BASE_URL：仓库基地址。
 # 根据 USE_SSH 选择 SSH（git@github.com:owner）或 HTTPS（https://github.com/owner）格式。
 if [ "$USE_SSH" = true ]; then
@@ -98,6 +122,7 @@ fi
 # 仓库地址：优先读取环境变量，若未设置则使用上面根据协议拼接的默认地址。
 # ${VAR:-default} 表示 VAR 为空或未定义时使用 default。
 SECRETPAD_REPO="${SECRETPAD_REPO:-${BASE_URL}/secretpad.git}"
+SECRETPAD_FRONTEND_REPO="${SECRETPAD_FRONTEND_REPO:-${BASE_URL}/secretpad-frontend.git}"
 KUSCIA_REPO="${KUSCIA_REPO:-${BASE_URL}/kuscia.git}"
 SECRETFLOW_REPO="${SECRETFLOW_REPO:-${BASE_URL}/secretflow.git}"
 PRIVACY_JAVA_REPO="${PRIVACY_JAVA_REPO:-${BASE_URL}/privacy-java-sdk.git}"
@@ -106,6 +131,7 @@ PRIVACY_LOCAL_AGENT_REPO="${PRIVACY_LOCAL_AGENT_REPO:-${BASE_URL}/privacy-local-
 
 # 分支名：同样支持环境变量覆盖。
 SECRETPAD_BRANCH="${SECRETPAD_BRANCH:-main}"
+SECRETPAD_FRONTEND_BRANCH="${SECRETPAD_FRONTEND_BRANCH:-main}"
 KUSCIA_BRANCH="${KUSCIA_BRANCH:-main}"
 SECRETFLOW_BRANCH="${SECRETFLOW_BRANCH:-main}"
 PRIVACY_JAVA_BRANCH="${PRIVACY_JAVA_BRANCH:-main}"
@@ -121,8 +147,8 @@ PRIVACY_LOCAL_AGENT_BRANCH="${PRIVACY_LOCAL_AGENT_BRANCH:-main}"
 #     $1 - 仓库远程地址（repo_url）
 #     $2 - 本地目标目录（target_dir），相对于 SFWORK_ROOT
 #     $3 - 目标分支（branch）
-#   返回值/退出码：
-#     0 - 成功；失败时由 git 命令返回非零码，set -e 会终止脚本。
+#   返回值：
+#     0 - 成功；1 - 失败（已打印错误信息，调用方可继续处理其他仓库）。
 #   使用示例：
 #     clone_or_update "$SECRETPAD_REPO" "$SFWORK_ROOT/secretpad" "$SECRETPAD_BRANCH"
 clone_or_update() {
@@ -130,7 +156,7 @@ clone_or_update() {
     local target_dir="$2"
     local branch="$3"
 
-    log_step "处理 $target_dir（分支：$branch）..."
+    log_step "处理 $target_dir (分支: $branch)..."
 
     # -d 测试目录是否存在。$target_dir/.git 存在说明这是一个 git 工作区。
     if [ -d "$target_dir/.git" ]; then
@@ -138,30 +164,63 @@ clone_or_update() {
         log_info "$target_dir 已是 git 仓库，执行更新 ..."
         # 使用圆括号创建子 shell，子 shell 内的 cd 不会影响父 shell 的工作目录。
         (
-            cd "$target_dir"
+            cd "$target_dir" || exit 1
+
+            # 若环境变量指定的远程地址与当前 origin 不一致，则更新 origin，
+            # 方便在 HTTPS / SSH 之间切换或更换仓库地址后仍能正常更新。
+            local current_origin
+            current_origin="$(git remote get-url origin 2>/dev/null || true)"
+            if [ -n "$current_origin" ] && [ "$current_origin" != "$repo_url" ]; then
+                log_info "检测到 origin 地址变化：$current_origin -> $repo_url"
+                git remote set-url origin "$repo_url"
+            fi
+
             # 从远程 origin 拉取最新引用，但不合并到当前分支。
-            git fetch origin
+            if ! git fetch origin; then
+                log_error "$target_dir: git fetch 失败"
+                exit 1
+            fi
+
+            # 先检查远程是否存在目标分支，避免后续 checkout 指向不存在的引用。
+            if ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+                log_error "$target_dir: 远程不存在分支 origin/$branch，请检查分支名或 SECRETPAD_BRANCH/KUSCIA_BRANCH/... 环境变量"
+                exit 1
+            fi
+
             # git show-ref --verify --quiet 检查本地是否已存在名为 $branch 的分支。
             # --quiet 使成功时不输出任何内容，仅通过退出码判断。
             if ! git show-ref --verify --quiet "refs/heads/$branch"; then
                 # 本地没有目标分支时，基于 origin/$branch 创建并检出。
-                # 若创建失败（例如远程分支名与本地冲突），则回退为直接 checkout。
-                git checkout -b "$branch" "origin/$branch" || git checkout "$branch"
+                if ! git checkout -b "$branch" "origin/$branch"; then
+                    log_error "$target_dir: 无法创建并切换到分支 $branch"
+                    exit 1
+                fi
             else
                 # 本地已有分支，直接切换。
-                git checkout "$branch"
+                if ! git checkout "$branch"; then
+                    log_error "$target_dir: 无法切换到分支 $branch"
+                    exit 1
+                fi
             fi
+
             # 将当前分支与远程同分支同步。
-            git pull origin "$branch"
-        )
+            if ! git pull origin "$branch"; then
+                log_error "$target_dir: git pull origin $branch 失败"
+                exit 1
+            fi
+        ) || return 1
     # -e 测试路径是否存在（文件或目录）。
     # 走到这里说明目标目录存在，但不是 git 仓库，避免误删用户数据，仅给出警告。
     elif [ -e "$target_dir" ]; then
         log_warn "$target_dir 已存在但不是一个 git 仓库，跳过。如需重新克隆，请手动删除该目录。"
+        return 1
     else
         # 目录不存在，执行克隆。--branch 指定克隆后直接检出的分支。
         log_info "从 $repo_url 克隆到 $target_dir ..."
-        git clone --branch "$branch" "$repo_url" "$target_dir"
+        if ! git clone --branch "$branch" "$repo_url" "$target_dir"; then
+            log_error "$target_dir: git clone 失败"
+            return 1
+        fi
     fi
 }
 
@@ -173,15 +232,35 @@ log_info "sfwork 根目录：$SFWORK_ROOT"
 # 命令替换 $([ "$USE_SSH" = true ] && echo SSH || echo HTTPS) 动态选择显示文本。
 log_info "使用协议：$([ "$USE_SSH" = true ] && echo SSH || echo HTTPS)"
 
-# 依次处理所有子项目。调用顺序不影响结果，但通常按 secretpad -> kuscia -> secretflow -> privacy-* 进行。
-clone_or_update "$SECRETPAD_REPO"           "$SFWORK_ROOT/secretpad"           "$SECRETPAD_BRANCH"
-clone_or_update "$KUSCIA_REPO"              "$SFWORK_ROOT/kuscia"              "$KUSCIA_BRANCH"
-clone_or_update "$SECRETFLOW_REPO"          "$SFWORK_ROOT/secretflow"          "$SECRETFLOW_BRANCH"
-clone_or_update "$PRIVACY_JAVA_REPO"        "$SFWORK_ROOT/privacy-java-sdk"    "$PRIVACY_JAVA_BRANCH"
-clone_or_update "$PRIVACY_GO_REPO"          "$SFWORK_ROOT/privacy-go-sdk"      "$PRIVACY_GO_BRANCH"
-clone_or_update "$PRIVACY_LOCAL_AGENT_REPO" "$SFWORK_ROOT/privacy-local-agent" "$PRIVACY_LOCAL_AGENT_BRANCH"
+# 依次处理所有子项目。单个失败不会退出脚本，确保尽可能多的仓库被克隆/更新。
+FAILED_COUNT=0
+
+process_repo() {
+    local repo_url="$1"
+    local target_dir="$2"
+    local branch="$3"
+
+    if ! clone_or_update "$repo_url" "$target_dir" "$branch"; then
+        ((FAILED_COUNT += 1)) || true
+    fi
+}
+
+process_repo "$SECRETPAD_REPO"           "$SFWORK_ROOT/secretpad"                  "$SECRETPAD_BRANCH"
+process_repo "$SECRETPAD_FRONTEND_REPO"  "$SFWORK_ROOT/secretpad/frontend-src"     "$SECRETPAD_FRONTEND_BRANCH"
+process_repo "$KUSCIA_REPO"              "$SFWORK_ROOT/kuscia"                     "$KUSCIA_BRANCH"
+process_repo "$SECRETFLOW_REPO"          "$SFWORK_ROOT/secretflow"          "$SECRETFLOW_BRANCH"
+process_repo "$PRIVACY_JAVA_REPO"        "$SFWORK_ROOT/privacy-java-sdk"    "$PRIVACY_JAVA_BRANCH"
+process_repo "$PRIVACY_GO_REPO"          "$SFWORK_ROOT/privacy-go-sdk"      "$PRIVACY_GO_BRANCH"
+process_repo "$PRIVACY_LOCAL_AGENT_REPO" "$SFWORK_ROOT/privacy-local-agent" "$PRIVACY_LOCAL_AGENT_BRANCH"
 
 # echo "" 输出空行，提升最终提示的可读性。
 echo ""
-log_info "所有子项目处理完成"
-log_info "下一步可参考 docs/二次开发运行说明.md 或 docs/无docker运行说明.md 启动环境"
+
+if [ "$FAILED_COUNT" -eq 0 ]; then
+    log_info "所有子项目处理完成"
+    log_info "下一步可参考 docs/二次开发运行说明.md 或 docs/无docker运行说明.md 启动环境"
+    exit 0
+else
+    log_error "共 $FAILED_COUNT 个子项目处理失败，请检查上面的错误日志"
+    exit 1
+fi
