@@ -86,7 +86,7 @@ PRIVACY_IMAGE="${PRIVACY_IMAGE:-secretflow/sf-privacy-dev:1.15.0.dev-privacy}"
 #   默认使用 secretflow/docker/privacy-dev/Dockerfile.
 #   在中国大陆无法访问 Docker Hub 时,可改用 Dockerfile.anolis:
 #     PRIVACY_DOCKERFILE=Dockerfile.anolis bash scripts/dev-start.sh
-PRIVACY_DOCKERFILE="${PRIVACY_DOCKERFILE:-Dockerfile.anolis}"
+PRIVACY_DOCKERFILE="${PRIVACY_DOCKERFILE:-Dockerfile}"
 
 # KUSCIA_IMAGE: 自定义 Kuscia 镜像 tag(可选)
 #   默认使用 install-kuscia-only.sh 内部的官方镜像.
@@ -153,6 +153,11 @@ fi
 #   原理:command -v 输出命令路径;>/dev/null 2>&1 丢弃输出,仅保留退出码.
 #   示例:command_exists java
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+# is_macos
+#   功能:判断当前操作系统是否为 macOS(Darwin).
+#   返回:0=是 macOS,1=不是
+is_macos() { [[ "$(uname -s)" == "Darwin" ]]; }
 
 # version_ge
 #   功能:比较两个版本号,判断 $1 >= $2.
@@ -252,20 +257,20 @@ check_environment() {
         exit 1
     fi
 
-    # Node.js 检测:前端项目最低要求 16.14.0,最高 18.x
-    # Umi 4 / dumi 2 依赖的 http_parser 等内部模块在 Node 19+ 中不可用,
-    # nice-napi 等原生模块在 Node 20+ 也经常需要重新编译。
+    # Node.js 检测:前端项目要求 Node.js > 18
+    # 高版本 Node.js 与 Umi 4 / React 18 等栈没有明显兼容性问题,
+    # 因此只要大于 18 即视为满足要求。
     local node_ver
     node_ver="$(get_node_version)"
-    if command_exists node && version_ge "$node_ver" "16.14.0" && ! version_ge "$node_ver" "19"; then
-        log_info "Node.js $node_ver 已满足要求 (推荐 18.x)"
+    if command_exists node && version_ge "$node_ver" "18"; then
+        log_info "Node.js $node_ver 已满足要求 (> 18)"
     else
         if command_exists node; then
-            log_error "当前 Node.js 版本为 $node_ver,SecretPad 前端需要 Node.js 16.14.0 至 18.x"
-            log_error "请使用 fnm/nvm 切换到 Node 18 后重试,例如:"
-            log_error "  fnm install 18 && fnm default 18 && fnm use 18"
+            log_error "当前 Node.js 版本为 $node_ver,SecretPad 前端需要 Node.js > 18"
+            log_error "请使用 fnm/nvm 切换到 Node 18 及以上版本后重试,例如:"
+            log_error "  fnm install 20 && fnm default 20 && fnm use 20"
         else
-            log_error "需要 Node.js 16.14.0 至 18.x,请安装后重试"
+            log_error "需要 Node.js > 18,请安装后重试"
         fi
         exit 1
     fi
@@ -338,19 +343,25 @@ check_environment() {
 #   功能:检测指定 TCP 端口是否正在监听.
 #   参数:$1 - 端口号
 #   返回:0=已被占用,1=未被占用
-#   原理:使用 ss -tln(比 netstat 更快,且无需 root 即可查看本机监听端口)
-#   正则 \\b 用于精确匹配端口号,避免 8080 误匹配 18080.
+#   跨平台说明:
+#     - Linux: 优先使用 ss -tln(无需 root 即可查看本机监听端口),降级到 netstat
+#     - macOS: 使用 lsof(macOS 没有 ss)
+#   正则 :port($|[[:space:]]) 用于精确匹配端口号,避免 8080 误匹配 18080;
+#   不使用 \\b,因为部分系统/GNU grep 下 \\b 在数字后无法正确匹配端口边界.
 port_in_use() {
     local port="$1"
-    # macOS 没有 ss,使用 lsof 作为通用检测手段
-    if command -v lsof >/dev/null 2>&1; then
-        lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
-    elif command -v ss >/dev/null 2>&1; then
-        ss -tln 2>/dev/null | grep -qE ":$port\\b"
-    elif command -v netstat >/dev/null 2>&1; then
-        netstat -anv 2>/dev/null | grep -qE "[.:]$port\\s+.*LISTEN"
+    if is_macos; then
+        # macOS 没有 ss,使用 lsof 检测监听端口
+        command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
     else
-        return 1
+        # Linux 优先使用 ss
+        if command -v ss >/dev/null 2>&1; then
+            ss -tln 2>/dev/null | grep -qE ":$port($|[[:space:]])"
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -tln 2>/dev/null | grep -qE ":[0-9]+\.[0-9]+:[0-9]+\s+|[.:]$port[[:space:]]+.*LISTEN"
+        else
+            return 1
+        fi
     fi
 }
 
@@ -358,15 +369,23 @@ port_in_use() {
 #   功能:获取占用指定端口的进程 ID.
 #   参数:$1 - 端口号
 #   输出:进程 ID(仅输出第一个匹配的 pid)
+#   跨平台说明:
+#     - Linux: 优先使用 ss -tlnp,降级到 netstat
+#     - macOS: 使用 lsof -ti
 port_pid() {
     local port="$1"
-    # macOS 使用 lsof -ti 直接获取监听端口的 pid
-    if command -v lsof >/dev/null 2>&1; then
-        lsof -tiTCP:"$port" -sTCP:LISTEN | head -1
-    elif command -v ss >/dev/null 2>&1; then
-        ss -tlnp 2>/dev/null | grep -E ":$port\\b" | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2
+    if is_macos; then
+        # macOS 使用 lsof -ti 直接获取监听端口的 pid
+        command -v lsof >/dev/null 2>&1 && lsof -tiTCP:"$port" -sTCP:LISTEN | head -1
     else
-        echo ""
+        # Linux 优先使用 ss
+        if command -v ss >/dev/null 2>&1; then
+            ss -tlnp 2>/dev/null | grep -E ":$port($|[[:space:]])" | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -tlnp 2>/dev/null | grep -E ":[0-9]+\.[0-9]+:[0-9]+\s+|[.:]$port[[:space:]]+" | grep -oE '/[0-9]+' | head -1 | tr -d '/'
+        else
+            echo ""
+        fi
     fi
 }
 
@@ -391,15 +410,18 @@ read_pidfile() {
 #   优势:服务就绪后立即返回,比固定 sleep 更智能.
 port_is_listening() {
     local port="$1"
-    # macOS 没有 ss,优先使用 lsof;Linux 同时保留 ss 作为备选
-    if command -v lsof >/dev/null 2>&1; then
-        lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
-    elif command -v ss >/dev/null 2>&1; then
-        ss -tln 2>/dev/null | grep -qE ":$port\\b"
-    elif command -v netstat >/dev/null 2>&1; then
-        netstat -anv 2>/dev/null | grep -qE "[.:]$port\\s+.*LISTEN"
+    if is_macos; then
+        # macOS 没有 ss,使用 lsof 检测监听端口
+        command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
     else
-        return 1
+        # Linux 优先使用 ss
+        if command -v ss >/dev/null 2>&1; then
+            ss -tln 2>/dev/null | grep -qE ":$port($|[[:space:]])"
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -tln 2>/dev/null | grep -qE ":[0-9]+\.[0-9]+:[0-9]+\s+|[.:]$port[[:space:]]+.*LISTEN"
+        else
+            return 1
+        fi
     fi
 }
 
@@ -596,6 +618,8 @@ build_secretflow_image() {
 
     # 将 wheel 复制到 Dockerfile 所在目录作为构建上下文
     mkdir -p "$SECRETFLOW_DIR/docker/privacy-dev"
+    # 清理旧的 wheel，避免 COPY secretflow-*.whl 复制多个版本导致安装旧包
+    rm -f "$SECRETFLOW_DIR/docker/privacy-dev"/secretflow-*.whl
     cp "$wheel" "$SECRETFLOW_DIR/docker/privacy-dev/"
 
     cd "$SECRETFLOW_DIR/docker/privacy-dev"
@@ -747,7 +771,8 @@ import_custom_image_to_lite() {
     fi
 
     # 如果镜像已存在于 Kuscia 内部镜像仓库,则无需重复导入
-    if image_exists_in_kuscia; then
+    # 但在重置 Kuscia 后仍可能残留同名同 tag 的旧镜像,因此强制重新导入
+    if [ "$RESET_KUSCIA" != true ] && image_exists_in_kuscia; then
         log_info "自定义镜像已在 ${node} 节点存在,跳过导入"
         return 0
     fi
@@ -766,8 +791,13 @@ import_custom_image_to_lite() {
 
 # import_custom_image_to_kuscia
 #   功能:确保自定义镜像对 Kuscia 各 Lite 节点可用.
+#   当 RESET_KUSCIA=true 时,强制重新导入,避免 Kuscia 内部镜像存储残留旧版本
+#   (同名同 tag 但 digest 不同,导致新代码不生效).
 import_custom_image_to_kuscia() {
     log_step "检查并导入自定义 SecretFlow 镜像到 Kuscia ..."
+    if [ "$RESET_KUSCIA" = true ]; then
+        log_info "Kuscia 已重置,强制重新导入自定义镜像 ..."
+    fi
     import_custom_image_to_lite alice
     import_custom_image_to_lite bob
 }
