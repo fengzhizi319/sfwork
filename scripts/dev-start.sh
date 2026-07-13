@@ -826,12 +826,17 @@ start_backend() {
     export KUSCIA_GW_ADDRESS=127.0.0.1:13081
     export KUSCIA_PROTOCOL=notls
 
+    # Kuscia Docker 模式将节点数据目录挂载到宿主机 $HOME/kuscia/master/data/{nodeId}
+    # SecretPad 后端下载结果文件时需要使用该路径,而非默认 /app/data
+    local kuscia_data_dir="${INSTALL_DIR:-$HOME/kuscia}/master/data"
+
     # nohup: 忽略 SIGHUP,终端关闭后进程继续运行
     # 标准输出和错误输出重定向到日志文件
     nohup java \
         -Dspring.profiles.active=dev \
         -Dsun.net.http.allowRestrictedHeaders=true \
         -Dserver.port=8443 \
+        -Dsecretpad.data.dir-path="$kuscia_data_dir" \
         -jar "$SECRETPAD_DIR/target/secretpad.jar" > "$LOG_DIR/backend.log" 2>&1 &
 
     # $! 保存最近一个后台进程的 PID;将其写入 PID 文件以便后续停止或检查
