@@ -722,6 +722,8 @@ start_kuscia() {
         # 关键:通过环境变量指定二次开发镜像,install-kuscia-only.sh 已支持覆盖
         export SECRETFLOW_IMAGE="$PRIVACY_IMAGE"
         # 如果用户显式指定了 KUSCIA_IMAGE(例如本地构建的 ARM64 镜像),则透传给安装脚本
+        # export KUSCIA_IMAGE  ← 显式导出环境变量
+        # bash scripts/install-kuscia-only.sh  ← 子进程继承环境变量
         if [[ -n "$KUSCIA_IMAGE" ]]; then
             export KUSCIA_IMAGE
             log_info "使用自定义 Kuscia 镜像:$KUSCIA_IMAGE"
