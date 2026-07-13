@@ -45,51 +45,44 @@ set -euo pipefail
 # 全局路径与常量
 # ------------------------------------------------------------------
 # ROOT_DIR: sfwork 工作区根目录，根据本脚本所在位置自动推导
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# 从 .env 文件加载环境变量配置
-DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$ROOT_DIR/.env}"
-if [ -f "$DEV_START_ENV_FILE" ]; then
+# 从 .env 文件加载环境变量配置 (默认读取 scripts 目录下的 .env)
+DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$(dirname "${BASH_SOURCE[0]}")/.env}"
+if [[ -f "$DEV_START_ENV_FILE" ]]; then
     set -a
     # shellcheck source=/dev/null
     source "$DEV_START_ENV_FILE"
     set +a
 fi
 
-# 各子项目源码目录
-KUSCIA_DIR="$ROOT_DIR/kuscia"
-SECRETPAD_DIR="$ROOT_DIR/secretpad"
-SECRETFLOW_DIR="$ROOT_DIR/secretflow"
+# 各子项目源码目录 (定义为只读常量)
+readonly KUSCIA_DIR="$ROOT_DIR/kuscia"
+readonly SECRETPAD_DIR="$ROOT_DIR/secretpad"
+readonly SECRETFLOW_DIR="$ROOT_DIR/secretflow"
 
 # LOG_DIR: 聚合日志目录；PID_DIR: 进程 ID 文件存放目录
-LOG_DIR="$ROOT_DIR/logs"
-PID_DIR="$LOG_DIR/pids"
+readonly LOG_DIR="${LOG_DIR:-$ROOT_DIR/logs}"
+readonly PID_DIR="$LOG_DIR/pids"
 
 # KUSCIA_HOME: Kuscia 本地运行时的主目录（数据、配置、pid 文件等）
-KUSCIA_HOME="$ROOT_DIR/.local-kuscia"
+readonly KUSCIA_HOME="${KUSCIA_HOME:-$ROOT_DIR/.local-kuscia}"
 
 # CONDA_ENV: SecretFlow 运行与构建使用的 conda 环境名称
 CONDA_ENV="${CONDA_ENV:-sf310}"
 
-# SUDO_PWD: 用于自动输入 sudo 密码。
-# 本地开发时可写入 .env 文件（已被 .gitignore 排除）；CI 或共享机器请通过环境变量注入。
-# 不再提供硬编码默认值，以避免默认密码泄露风险。
+# SUDO_PWD: 用于自动输入 sudo 密码
 SUDO_PWD="${SUDO_PWD:-}"
 
-# 创建日志和 PID 目录
-# -p 表示若目录已存在则忽略，并自动创建父目录
-mkdir -p "$LOG_DIR"
-mkdir -p "$PID_DIR"
-
 # ------------------------------------------------------------------
-# 颜色与日志
+# 颜色与日志 (定义为只读常量)
 # ------------------------------------------------------------------
 # ANSI 转义码，用于终端彩色输出
-RED='\033[0;31m'      # 红色：错误
-GREEN='\033[0;32m'    # 绿色：正常信息
-YELLOW='\033[1;33m'   # 黄色加粗：警告
-BLUE='\033[0;34m'     # 蓝色：步骤提示
-NC='\033[0m'          # 重置颜色
+readonly RED='\033[0;31m'      # 红色：错误
+readonly GREEN='\033[0;32m'    # 绿色：正常信息
+readonly YELLOW='\033[1;33m'   # 黄色加粗：警告
+readonly BLUE='\033[0;34m'     # 蓝色：步骤提示
+readonly NC='\033[0m'          # 重置颜色
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $*"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
@@ -108,7 +101,7 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 #     3. 否则报错并提示设置 SUDO_PWD
 #   注意：在脚本中明文传递密码存在安全风险，仅建议本地开发使用。
 run_sudo() {
-    if [ -n "${SUDO_PWD:-}" ]; then
+    if [[ -n "${SUDO_PWD:-}" ]]; then
         echo "$SUDO_PWD" | sudo -S "$@"
     elif sudo -n true 2>/dev/null; then
         sudo "$@"
@@ -130,7 +123,11 @@ run_sudo() {
 #   说明：使用 ps -p 避免对无权限进程使用 kill -0 产生误判。
 is_process_alive() {
     local pid="$1"
-    [ -n "$pid" ] && ps -p "$pid" >/dev/null 2>&1
+    if [[ -n "$pid" ]]; then
+        ps -p "$pid" >/dev/null 2>&1
+    else
+        return 1
+    fi
 }
 
 # stop_service_by_pidfile
@@ -145,7 +142,7 @@ is_process_alive() {
 #     4. 删除 PID 文件
 stop_service_by_pidfile() {
     local pidfile="$1" name="$2"
-    if [ -f "$pidfile" ]; then
+    if [[ -f "$pidfile" ]]; then
         local pid
         pid="$(cat "$pidfile")"
         if is_process_alive "$pid"; then
@@ -185,8 +182,9 @@ port_in_use() {
 wait_for_port() {
     local host="$1" port="$2" timeout_sec="${3:-60}" what="$4"
     log_info "等待 $what 就绪：$host:$port（最多 ${timeout_sec}s）..."
+    local i
     for ((i = 0; i < timeout_sec; i++)); do
-        if ss -tln 2>/dev/null | grep -qE ":$port\\b"; then
+        if port_in_use "$port"; then
             log_info "$what 已就绪"
             return 0
         fi
@@ -208,7 +206,7 @@ wait_for_port() {
 #     - 否则 source conda.sh 并激活目标环境
 ensure_conda_env() {
     # 检查当前是否已在目标 conda 环境中
-    if [ -n "${CONDA_PREFIX:-}" ] && [[ "$(basename "$CONDA_PREFIX")" == "$CONDA_ENV" ]]; then
+    if [[ -n "${CONDA_PREFIX:-}" && "$(basename "$CONDA_PREFIX")" == "$CONDA_ENV" ]]; then
         return 0
     fi
 
@@ -216,7 +214,7 @@ ensure_conda_env() {
     local conda_base
     conda_base="$(conda info --base 2>/dev/null)"
     # 如果找不到 conda 或 conda.sh，说明未安装 conda
-    if [ -z "$conda_base" ] || [ ! -f "$conda_base/etc/profile.d/conda.sh" ]; then
+    if [[ -z "$conda_base" || ! -f "$conda_base/etc/profile.d/conda.sh" ]]; then
         log_error "未找到 conda，请先安装 Anaconda/Miniconda"
         exit 1
     fi
@@ -237,10 +235,11 @@ ensure_conda_env() {
 # check_dependencies
 #   功能：检查运行本脚本所需的系统命令、Java/Node 版本、conda 环境等。
 #   退出码：0=检查通过；否则 exit 1
- check_dependencies() {
+check_dependencies() {
     log_step "检查系统依赖..."
 
     # for 循环遍历所需命令数组
+    local cmd
     for cmd in java mvn node pnpm go gcc git openssl conda; do
         # command -v 检测命令是否在 PATH 中
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -254,13 +253,13 @@ ensure_conda_env() {
     # awk -F '"' 以双引号分隔，提取 version 后的版本号；cut -d. -f1 取主版本号
     local java_version
     java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d. -f1)
-    if [ "$java_version" != "17" ]; then
+    if [[ "$java_version" != "17" ]]; then
         log_error "需要 Java 17，当前版本: $(java -version 2>&1 | head -1)"
         exit 1
     fi
 
     # Node.js 版本检测
-    # node -v 输出形如 v18.16.0；sed 's/v//' 去掉前缀 v
+    # node -v 输出形如 v18.16.0；sed 's/v//' 去型 v
     local node_version
     node_version=$(node -v | sed 's/v//')
     # dpkg --compare-versions 是 Debian/Ubuntu 系统提供的版本比较工具
@@ -274,7 +273,7 @@ ensure_conda_env() {
     log_info "当前 Python 环境：$CONDA_PREFIX ($(python --version))"
 
     # 安全提示：若通过 .env 或环境变量设置了 SUDO_PWD，提醒不要在共享环境使用
-    if [ -n "${SUDO_PWD:-}" ]; then
+    if [[ -n "${SUDO_PWD:-}" ]]; then
         log_warn "当前通过 SUDO_PWD 传入 sudo 密码；请勿将密码提交到版本控制"
     fi
 }
@@ -286,12 +285,13 @@ ensure_conda_env() {
 # check_ports
 #   功能：检查关键端口是否已被占用，提前发现冲突。
 #   说明：Kuscia Master 需要 53/80/8083 等端口；SecretPad 需要 8080/8443/8000。
- check_ports() {
+check_ports() {
     log_step "检查关键端口占用情况..."
     # 数组：需要检查的端口列表
     local ports=(53 80 8080 8082 8083 8092 8443 8000)
     # 数组：存储被占用的端口
     local occupied=()
+    local port
     for port in "${ports[@]}"; do
         if port_in_use "$port"; then
             # 将被占用端口追加到 occupied 数组
@@ -299,7 +299,7 @@ ensure_conda_env() {
         fi
     done
     # ${#occupied[@]} 表示数组元素个数
-    if [ ${#occupied[@]} -gt 0 ]; then
+    if (( ${#occupied[@]} > 0 )); then
         log_warn "以下端口已被占用：${occupied[*]}"
         log_warn "若启动失败，请先释放这些端口（尤其是 53 / 80 / 8083）"
     else
@@ -389,9 +389,9 @@ PY
     # 等待 2 秒，让 kuscia 进程有足够时间写入 pid 文件
     sleep 2
     local kuscia_pid
-    # run_sudo cat 读取 root 权限创建的 pid 文件；|| true 防止读取失败时脚本退出
+    # run_sudo cat 读取 root 权限创建 of pid 文件；|| true 防止读取失败时脚本退出
     kuscia_pid="$(run_sudo cat "$KUSCIA_HOME/var/kuscia.pid" 2>/dev/null || true)"
-    if [ -n "$kuscia_pid" ]; then
+    if [[ -n "$kuscia_pid" ]]; then
         # 将 PID 保存到 PID_DIR，供后续 stop 使用
         echo "$kuscia_pid" > "$PID_DIR/kuscia-master.pid"
         log_info "Kuscia Master 已启动（pid $kuscia_pid）"
@@ -409,11 +409,11 @@ PY
 #   说明：
 #     - 优先使用 run_local_kuscia.sh 自身的 --stop 参数进行优雅停止
 #     - 若仍有残留 kuscia 进程，使用 pgrep 查找并通过 sudo 发送 SIGKILL
- stop_kuscia_master() {
+stop_kuscia_master() {
     log_info "停止 Kuscia Master ..."
     export KUSCIA_HOME="$KUSCIA_HOME"
     # 优先使用脚本自身的 --stop
-    if [ -f "$KUSCIA_HOME/var/kuscia.pid" ]; then
+    if [[ -f "$KUSCIA_HOME/var/kuscia.pid" ]]; then
         run_sudo bash "$KUSCIA_DIR/scripts/run_local_kuscia.sh" --stop || true
     fi
 
@@ -421,7 +421,7 @@ PY
     # pgrep -f "kuscia start -c" 按完整命令行匹配 kuscia 主进程
     local remaining
     remaining="$(pgrep -f "kuscia start -c" 2>/dev/null || true)"
-    if [ -n "$remaining" ]; then
+    if [[ -n "$remaining" ]]; then
         log_warn "发现残留 Kuscia 进程，强制清理..."
         # 注意：$remaining 故意不加引号，以允许空格分隔的多个 PID 被 kill 分别接收
         run_sudo kill -9 $remaining 2>/dev/null || true
@@ -438,11 +438,11 @@ PY
 # build_secretpad_backend
 #   功能：编译 SecretPad 后端。
 #   说明：使用 Maven 构建多模块项目，跳过测试以加速本地构建。
- build_secretpad_backend() {
+build_secretpad_backend() {
     log_step "编译 SecretPad 后端..."
     cd "$SECRETPAD_DIR"
     mvn clean install -Dmaven.test.skip=true
-    if [ ! -f "$SECRETPAD_DIR/target/secretpad.jar" ]; then
+    if [[ ! -f "$SECRETPAD_DIR/target/secretpad.jar" ]]; then
         log_error "后端编译失败：未找到 target/secretpad.jar"
         exit 1
     fi
@@ -454,11 +454,11 @@ PY
 #   说明：
 #     - 若证书与 JKS 已存在则跳过，避免重复生成
 #     - 否则先删除旧证书，再调用 secretpad/scripts/test/setup.sh 生成
- generate_certs() {
+generate_certs() {
     log_step "生成证书与 JKS ..."
     cd "$SECRETPAD_DIR"
 
-    if [ -f "$SECRETPAD_DIR/config/server.jks" ] && [ -f "$SECRETPAD_DIR/config/certs/client.crt" ]; then
+    if [[ -f "$SECRETPAD_DIR/config/server.jks" && -f "$SECRETPAD_DIR/config/certs/client.crt" ]]; then
         log_info "证书与 JKS 已存在，跳过生成"
         return 0
     fi
@@ -510,13 +510,13 @@ PY
 #     - 配置前端代理文件 .env，将 /api 请求转发到后端 8080 端口
 #     - 首次运行时安装前端依赖
 #     - 使用 pnpm --filter secretpad dev 启动 Umi 开发服务器
- start_secretpad_frontend() {
+start_secretpad_frontend() {
     log_step "启动 SecretPad 前端..."
     stop_service_by_pidfile "$PID_DIR/secretpad-frontend.pid" "SecretPad 前端"
 
     # 前端代理配置文件路径
     local env_file="$SECRETPAD_DIR/frontend-src/apps/platform/.env"
-    if [ ! -f "$env_file" ]; then
+    if [[ ! -f "$env_file" ]]; then
         log_info "创建前端代理配置 $env_file"
         echo "PROXY_URL=http://127.0.0.1:8080" > "$env_file"
     elif ! grep -q '^PROXY_URL=' "$env_file" 2>/dev/null; then
@@ -526,7 +526,7 @@ PY
 
     cd "$SECRETPAD_DIR/frontend-src"
     # 通过判断 node_modules 是否存在来决定是否需要安装依赖
-    if [ ! -d "node_modules" ]; then
+    if [[ ! -d "node_modules" ]]; then
         log_info "首次运行，安装前端依赖..."
         pnpm bootstrap
     fi
@@ -545,7 +545,7 @@ PY
 # stop_all_services
 #   功能：停止所有由本脚本启动的服务。
 #   说明：按前端 -> 后端 -> Kuscia Master 的顺序停止。
- stop_all_services() {
+stop_all_services() {
     log_step "停止所有服务..."
     stop_service_by_pidfile "$PID_DIR/secretpad-frontend.pid" "SecretPad 前端"
     stop_service_by_pidfile "$PID_DIR/secretpad-backend.pid" "SecretPad 后端"
@@ -555,7 +555,7 @@ PY
 
 # print_summary
 #   功能：打印启动成功后的摘要信息。
- print_summary() {
+print_summary() {
     local frontend_url="http://localhost:8000"
     local backend_health="http://localhost:8080/actuator/health"
     local backend_https="https://localhost:8443"
@@ -589,13 +589,18 @@ PY
 # main
 #   功能：脚本入口，根据参数决定停止服务或完整启动。
 #   参数：$@ - 命令行参数
- main() {
-    if [ "${1:-}" = "--stop" ]; then
+main() {
+    if [[ "${1:-}" == "--stop" ]]; then
         stop_all_services
         exit 0
     fi
 
     check_dependencies
+    
+    # 延迟创建日志与 PID 目录
+    mkdir -p "$LOG_DIR"
+    mkdir -p "$PID_DIR"
+
     check_ports
 
     # 1. 本地 SecretFlow（conda 环境）
