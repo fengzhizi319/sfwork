@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>c-life 隐私计算平台 — 团队汇报</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0071e3;
+      --accent-soft: #e8f3fd;
+      --purple: #5e5ce6;
+      --pink: #bf5af2;
+      --success: #34c759;
+      --warning: #ff9500;
+      --danger: #ff3b30;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.08);
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      width: min(1200px, 92vw);
+      height: min(720px, 80vh);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 64px 72px;
+      opacity: 0;
+      transform: translateX(80px) scale(0.96);
+      pointer-events: none;
+      transition: all 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    .slide.prev {
+      transform: translateX(-80px) scale(0.96);
+      opacity: 0;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--accent), var(--purple), var(--pink));
+    }
+
+    .slide-number {
+      position: absolute;
+      top: 28px;
+      right: 36px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.08;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 36px;
+      line-height: 1.15;
+    }
+
+    h3 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    p, li {
+      font-size: 20px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    p.subtitle {
+      font-size: 26px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      flex: 1;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      flex: 1;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      flex: 1;
+    }
+
+    .card {
+      background: #fafafc;
+      border-radius: 20px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .card.accent {
+      background: var(--accent-soft);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      color: white;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .card p, .card li {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    ul.clean {
+      list-style: none;
+    }
+
+    ul.clean li {
+      position: relative;
+      padding-left: 28px;
+      margin-bottom: 12px;
+    }
+
+    ul.clean li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+      margin-top: 8px;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e8e8ed;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .tag.l5 { background: #ffe5e3; color: #c0392b; }
+    .tag.l4 { background: #fff4e3; color: #d35400; }
+    .tag.l3 { background: #e8f3fd; color: #2874a6; }
+    .tag.l2 { background: #e9f7ef; color: #1e8449; }
+    .tag.l1 { background: #f2f2f7; color: #555; }
+
+    .arrow-flow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 24px 0;
+    }
+
+    .flow-box {
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      color: white;
+      padding: 14px 20px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 15px;
+      white-space: nowrap;
+    }
+
+    .flow-arrow {
+      font-size: 24px;
+      color: var(--text-secondary);
+    }
+
+    .big-number {
+      font-size: 72px;
+      font-weight: 800;
+      background: linear-gradient(120deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .footer-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 72px;
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.9));
+    }
+
+    .progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      transition: width 0.4s ease;
+    }
+
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      cursor: pointer;
+      font-size: 22px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      z-index: 20;
+    }
+
+    .nav-btn:hover {
+      background: white;
+      transform: translateY(-50%) scale(1.08);
+    }
+
+    .nav-btn.prev-btn { left: 24px; }
+    .nav-btn.next-btn { right: 24px; }
+
+    .dots {
+      display: flex;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d2d2d7;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dot.active {
+      background: var(--accent);
+      width: 24px;
+      border-radius: 5px;
+    }
+
+    .center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex: 1;
+    }
+
+    .gradient-text {
+      background: linear-gradient(120deg, var(--accent), var(--purple), var(--pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    code {
+      font-family: "SF Mono", Consolas, Monaco, monospace;
+      background: #f2f2f7;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.85em;
+    }
+
+    .small-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 40px 32px; }
+      h1 { font-size: 42px; }
+      h2 { font-size: 30px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      table { font-size: 13px; }
+      th, td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <section class="slide active">
+    <div class="center">
+      <div style="font-size: 18px; font-weight: 600; color: var(--accent); letter-spacing: 1px; margin-bottom: 24px;">全流程隐私计算体系</div>
+      <h1>c-life<br/>隐私计算平台</h1>
+      <p class="subtitle">团队汇报与落地白皮书</p>
+      <div style="margin-top: 48px; display: flex; gap: 16px; justify-content: center;">
+        <span class="tag l3">① 数据分类分级</span>
+        <span class="tag l4">② 本地隐私处理</span>
+        <span class="tag l5">③ 联邦学习 FL</span>
+        <span class="tag l2">③ 安全多方计算 MPC</span>
+      </div>
+    </div>
+    <div class="slide-number">01 / 12</div>
+  </section>
+
+  <!-- Slide 2: Agenda -->
+  <section class="slide">
+    <h2>汇报议程</h2>
+    <div class="grid-2" style="align-items: stretch;">
+      <div class="card">
+        <div class="card-icon">01</div>
+        <h3>问题与价值</h3>
+        <p>为什么必须做分类分级与本地隐私保护？数据“黑箱”带来的合规与业务风险。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">02</div>
+        <h3>三层能力体系</h3>
+        <p>分类分级是“眼睛”，本地隐私处理是“手”，FL/MPC 是“协同计算中的防护盾”。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">03</div>
+        <h3>系统架构与交付</h3>
+        <p>双模执行、参数治理、多语言多格式 SDK / Agent / REST / gRPC。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">04</div>
+        <h3>落地路线与协同</h3>
+        <p>P0 ~ P4 四阶段里程碑、团队分工、主要风险与应对。</p>
+      </div>
+    </div>
+    <div class="slide-number">02 / 12</div>
+  </section>
+
+  <!-- Slide 3: Pain points -->
+  <section class="slide">
+    <h2>现实痛点：数据“黑箱”与保护脱节</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%;">痛点</th>
+          <th style="width: 42%;">具体表现</th>
+          <th style="width: 36%;">后果</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>数据“黑箱”</strong></td>
+          <td>平台不知道接入数据里有没有身份证号、基因序列、HIV 诊断</td>
+          <td>高敏感数据可能以明文形式参与计算或导出</td>
+        </tr>
+        <tr>
+          <td><strong>策略与计算脱节</strong></td>
+          <td>安全策略写在文档里，实际执行靠人工判断</td>
+          <td>误用、漏用保护算法，合规风险高</td>
+        </tr>
+        <tr>
+          <td><strong>使用门槛高</strong></td>
+          <td>DP 的 ε、K-匿名的 K、脱敏规则对业务开发不透明</td>
+          <td>业务系统不敢用、不会用、乱用</td>
+        </tr>
+        <tr>
+          <td><strong>接入方式单一</strong></td>
+          <td>只有批量 DAG 组件，没有本地实时能力</td>
+          <td>无法覆盖 API 脱敏、医生工作站、大模型网关</td>
+        </tr>
+        <tr>
+          <td><strong>参数无法治理</strong></td>
+          <td>参数散落在代码、配置文件、UI 面板中</td>
+          <td>无法审计、无法版本化、无法自动推荐</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="slide-number">03 / 12</div>
+  </section>
+
+  <!-- Slide 4: Value positioning -->
+  <section class="slide">
+    <h2>价值定位：看见 → 处理 → 协同</h2>
+    <div class="arrow-flow" style="justify-content: center; margin-top: 20px;">
+      <div class="flow-box">数据接入</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">分类分级</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">本地隐私处理</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">联邦学习 / MPC</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">审计 + 预算台账</div>
+    </div>
+    <div class="grid-3" style="margin-top: 12px;">
+      <div class="card accent">
+        <div class="card-icon">👁</div>
+        <h3>① 识别</h3>
+        <p>自动判断字段、记录、整表、图片、手写病例的敏感等级（L1 ~ L5），输出可被下游消费的 SecurityTag。</p>
+      </div>
+      <div class="card accent">
+        <div class="card-icon">🛡</div>
+        <h3>② 处理</h3>
+        <p>脱敏、K-匿名、差分隐私、查询混淆四类原语，支持批量组件与本地 SDK，实现单点保护。</p>
+      </div>
+      <div class="card accent">
+        <div class="card-icon">🔒</div>
+        <h3>③ 协同</h3>
+        <p>FL / MPC 让跨机构计算在原始数据不出域、不可见的前提下完成，补全“识别 → 处理 → 协同 → 审计”闭环。</p>
+      </div>
+    </div>
+    <div class="slide-number">04 / 12</div>
+  </section>
+
+  <!-- Slide 5: Classification -->
+  <section class="slide">
+    <h2>① 数据分类分级：给数据贴“安全标签”</h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-bottom: 18px;">五级敏感标准</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="card" style="flex-direction: row; align-items: center; gap: 16px; padding: 18px 22px;">
+            <span class="tag l5">L5 极高风险</span>
+            <span class="small-text">基因序列、罕见病原始样本 → 强制入 TEE</span>
+          </div>
+          <div class="card" style="flex-direction: row; align-items: center; gap: 16px; padding: 18px 22px;">
+            <span class="tag l4">L4 高风险</span>
+            <span class="small-text">HIV / 精神病 / 癌症完整病历 → MPC / FL</span>
+          </div>
+          <div class="card" style="flex-direction: row; align-items: center; gap: 16px; padding: 18px 22px;">
+            <span class="tag l3">L3 中风险</span>
+            <span class="small-text">身份证号、手机号、诊疗记录 → DP / K-匿名 / 脱敏</span>
+          </div>
+          <div class="card" style="flex-direction: row; align-items: center; gap: 16px; padding: 18px 22px;">
+            <span class="tag l2">L2 低风险</span>
+            <span class="small-text">去标识化统计级数据 → 联盟内受限共享</span>
+          </div>
+          <div class="card" style="flex-direction: row; align-items: center; gap: 16px; padding: 18px 22px;">
+            <span class="tag l1">L1 公开级</span>
+            <span class="small-text">医院公开运营数据 → 公开发布</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-bottom: 18px;">三层漏斗式检测引擎</h3>
+        <div class="card" style="margin-bottom: 16px;">
+          <strong>第一层 · Rule Engine</strong>
+          <p class="small-text">RE2 正则 + FST 字典，微秒级，100% 召回目标</p>
+        </div>
+        <div class="card" style="margin-bottom: 16px;">
+          <strong>第二层 · Small-NER</strong>
+          <p class="small-text">ONNX 轻量模型，毫秒级，医疗命名实体识别</p>
+        </div>
+        <div class="card">
+          <strong>第三层 · VLM / LLM</strong>
+          <p class="small-text">本地多模态大模型 Qwen2-VL-2B，识别病例图片、手写病历、非结构化 OCR 文本，秒级旁路异步复核</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">05 / 12</div>
+  </section>
+
+  <!-- Slide 6: Local privacy primitives -->
+  <section class="slide">
+    <h2>② 本地隐私处理：四类“保护动作”</h2>
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-icon">🎭</div>
+        <h3>脱敏 Masking</h3>
+        <p>直接隐藏或变换敏感字段</p>
+        <code style="margin-top: 12px;">身份证 → 110***********1234</code>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h3>K-匿名</h3>
+        <p>让任意一条记录无法被唯一识别</p>
+        <code style="margin-top: 12px;">年龄 28 → [20-30]</code>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>差分隐私 DP</h3>
+        <p>统计结果中加入可控噪声</p>
+        <code style="margin-top: 12px;">COUNT 1000 → 1000.3</code>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌫</div>
+        <h3>查询混淆 QOL</h3>
+        <p>隐藏真实查询意图</p>
+        <code style="margin-top: 12px;">真实查询 + 3 条 dummy</code>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 24px; flex-direction: row; align-items: center; gap: 24px;">
+      <div class="big-number">4</div>
+      <div>
+        <h3>双模执行</h3>
+        <p class="small-text">批量模式跑在 DataMesh / Kuscia 处理整表；本地模式作为 Java / Go / Python SDK 或 REST / gRPC 服务处理单条 / 小批量数据。</p>
+      </div>
+    </div>
+    <div class="slide-number">06 / 12</div>
+  </section>
+
+  <!-- Slide 7: FL & MPC (new section) -->
+  <section class="slide">
+    <h2>③ 联邦学习 & 安全多方计算</h2>
+    <p class="subtitle" style="margin-top: -24px; margin-bottom: 28px;">把“数据可用不可见”从单点保护扩展到多方协同</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>联邦学习 FL</h3>
+        <p class="small-text" style="margin-bottom: 14px;">数据留在本地，只交换模型参数或梯度。</p>
+        <table>
+          <tr><th></th><th>横向联邦 HFL</th><th>纵向联邦 VFL</th></tr>
+          <tr><td>数据分布</td><td>特征相同，样本不同</td><td>样本重叠，特征互补</td></tr>
+          <tr><td>关键组件</td><td>FedAvg、安全聚合</td><td>PSI、Split Learning、SPU</td></tr>
+          <tr><td>主要风险</td><td>梯度泄露</td><td>对齐泄露、特征推断</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>安全多方计算 MPC</h3>
+        <p class="small-text" style="margin-bottom: 14px;">计算过程中任何一方都看不到其他方原始输入。</p>
+        <table>
+          <tr><th>协议</th><th>核心思想</th><th>对应</th></tr>
+          <tr><td>秘密分享</td><td>数据拆分，单方无意义</td><td>SPU</td></tr>
+          <tr><td>混淆电路</td><td>加密布尔电路计算</td><td>SPU / ABY3</td></tr>
+          <tr><td>同态加密</td><td>密文上直接运算</td><td>HEU</td></tr>
+          <tr><td>隐私求交</td><td>找 ID 交集不泄露非交集</td><td><code>data_prep/psi</code></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="slide-number">07 / 12</div>
+  </section>
+
+  <!-- Slide 8: Routing strategy -->
+  <section class="slide">
+    <h2>L1~L5 协同路由策略</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 16%;">数据等级</th>
+          <th style="width: 38%;">协同计算策略</th>
+          <th style="width: 46%;">本地保护动作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag l5">L5</span></td>
+          <td>原则上禁止进入 FL/MPC 明文计算；必须入 TEE 或硬件隔离</td>
+          <td>禁止出域、端到端加密</td>
+        </tr>
+        <tr>
+          <td><span class="tag l4">L4</span></td>
+          <td>进入 MPC / VFL，数据可用不可见；输出侧加 DP</td>
+          <td>DP（ε≤0.1）、严格审计</td>
+        </tr>
+        <tr>
+          <td><span class="tag l3">L3</span></td>
+          <td>可进入 FL / MPC，但需先本地脱敏或 K-匿名</td>
+          <td>K-匿名（k≥5）、脱敏、DP（ε≤1.0）</td>
+        </tr>
+        <tr>
+          <td><span class="tag l2">L2</span></td>
+          <td>可在联盟内 FL / MPC 共享</td>
+          <td>轻量脱敏、受限查询</td>
+        </tr>
+        <tr>
+          <td><span class="tag l1">L1</span></td>
+          <td>无需 FL/MPC，直接公开</td>
+          <td>无</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="card" style="margin-top: 24px;">
+      <p class="small-text"><strong>端到端示例：</strong>医院 A 表经分类分级识别 L5 字段 → L5 剥离/入 TEE，L4 进入 MPC 统计，L3 先脱敏 → PSI 对齐共同患者 → MPC 聚合 → 输出侧 DP 加噪 + 脱敏 → L2 结果出域。</p>
+    </div>
+    <div class="slide-number">08 / 12</div>
+  </section>
+
+  <!-- Slide 9: Architecture -->
+  <section class="slide">
+    <h2>系统架构：双模执行 + 统一治理</h2>
+    <div class="grid-2" style="gap: 40px;">
+      <div class="card">
+        <h3>批量模式</h3>
+        <ul class="clean">
+          <li>SecretPad DAG 画布拖拽组件</li>
+          <li>SecretFlow Component 在 PYU / SPU / HEU 执行</li>
+          <li>DataMesh / Kuscia 负责任务调度与数据授权</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>本地模式</h3>
+        <ul class="clean">
+          <li>Java / Go / Python 本地 SDK 进程内调用</li>
+          <li>REST / gRPC 本地 Agent 多语言接入</li>
+          <li>CLI 工具用于调试与预览</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 28px;">
+      <h3>参数治理优先级</h3>
+      <div class="arrow-flow" style="margin: 0;">
+        <div class="flow-box" style="padding: 10px 16px; font-size: 13px;">请求参数</div>
+        <span class="flow-arrow" style="font-size: 18px;">→</span>
+        <div class="flow-box" style="padding: 10px 16px; font-size: 13px;">上下文覆盖</div>
+        <span class="flow-arrow" style="font-size: 18px;">→</span>
+        <div class="flow-box" style="padding: 10px 16px; font-size: 13px;">项目 Profile</div>
+        <span class="flow-arrow" style="font-size: 18px;">→</span>
+        <div class="flow-box" style="padding: 10px 16px; font-size: 13px;">预置模板</div>
+        <span class="flow-arrow" style="font-size: 18px;">→</span>
+        <div class="flow-box" style="padding: 10px 16px; font-size: 13px;">算法默认值</div>
+      </div>
+    </div>
+    <div class="slide-number">09 / 12</div>
+  </section>
+
+  <!-- Slide 10: Product & Delivery -->
+  <section class="slide">
+    <h2>产品需求与交付形态</h2>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon">🧩</div>
+        <h3>批量 DAG</h3>
+        <p>四类原语组件、隐私证明展示、隐私预算管理、输入输出绑定 Data Catalog。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h3>本地 SDK / Agent</h3>
+        <p>Python / Java / Go SDK + REST / gRPC Agent + CLI，覆盖实时查询、医生工作站、大模型网关。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <h3>参数治理</h3>
+        <p>模板中心、项目 Profile、自动推荐、手动覆盖、强制策略、版本审计、隐私预算台账。</p>
+      </div>
+    </div>
+    <div class="grid-4" style="margin-top: 24px;">
+      <div class="card" style="text-align: center;">
+        <div class="big-number" style="font-size: 48px;">P0</div>
+        <p class="small-text">抽象 + Python 本地 SDK（脱敏、K-匿名）</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div class="big-number" style="font-size: 48px;">P1</div>
+        <p class="small-text">DP 本地函数 + REST Agent</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div class="big-number" style="font-size: 48px;">P2</div>
+        <p class="small-text">批量组件接入 SecretPad DAG</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div class="big-number" style="font-size: 48px;">P3~P4</div>
+        <p class="small-text">QOL + 预算台账 + Java/Go SDK + gRPC</p>
+      </div>
+    </div>
+    <div class="slide-number">10 / 12</div>
+  </section>
+
+  <!-- Slide 11: Team & Risks -->
+  <section class="slide">
+    <h2>团队协同与主要风险</h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-bottom: 18px;">AI-Native 人机分工</h3>
+        <div class="card" style="margin-bottom: 16px;">
+          <strong>人类架构师 · 10-15h/周</strong>
+          <p class="small-text">医疗规则校准、策略路由设计、Prompt 场景审核、Code Review</p>
+        </div>
+        <div class="card">
+          <strong>AI Code Agent · 40-50h/周</strong>
+          <p class="small-text">代码生成（规则引擎、Catalog、Scanner、NER 封装、LLM 客户端、测试、部署脚本）、文档生成</p>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-bottom: 18px;">主要风险与应对</h3>
+        <table>
+          <tr><th>风险</th><th>概率</th><th>应对</th></tr>
+          <tr><td>Small-NER 延迟 > 50ms</td><td>中</td><td>INT8 量化或降级为 Rule + LLM</td></tr>
+          <tr><td>LLM JSON 输出不稳定</td><td>中</td><td>vLLM Guided Decoding + Pydantic 后处理</td></tr>
+          <tr><td>多语言 SDK 实现不一致</td><td>中</td><td>核心算法 Python 实现，建立一致性测试集</td></tr>
+          <tr><td>标签同步延迟 > 5s</td><td>低</td><td>Gateway 缓存保守策略，Catalog 异步更新</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="slide-number">11 / 12</div>
+  </section>
+
+  <!-- Slide 12: Summary -->
+  <section class="slide">
+    <div class="center">
+      <h2 class="gradient-text">总结</h2>
+      <p style="font-size: 26px; max-width: 900px; margin: 32px 0;">
+        本项目不是单纯增加几个算法，而是构建一套<br/>
+        <strong>“识别 → 处理 → 协同 → 审计”</strong> 的完整隐私计算平台体系。
+      </p>
+      <div class="grid-2" style="max-width: 900px; text-align: left;">
+        <div class="card">
+          <h3>① 分类分级让平台“看得见”</h3>
+          <p class="small-text">自动识别结构化字段、文本、图片、手写病历的 L1~L5 敏感等级，输出可消费的 SecurityTag。</p>
+        </div>
+        <div class="card">
+          <h3>② 本地隐私处理让平台“管得住”</h3>
+          <p class="small-text">脱敏、K-匿名、DP、QOL 四类原语，覆盖单点与批量场景。</p>
+        </div>
+        <div class="card">
+          <h3>③ FL / MPC 让协同计算“不可见”</h3>
+          <p class="small-text">跨机构联合建模与统计，原始数据始终不出域、不可见。</p>
+        </div>
+        <div class="card">
+          <h3>参数治理与审计让风险“可追溯”</h3>
+          <p class="small-text">模板、Profile、预算台账、审计日志四位一体。</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">12 / 12</div>
+  </section>
+
+  <!-- Navigation -->
+  <button class="nav-btn prev-btn" id="prevBtn" aria-label="上一页">‹</button>
+  <button class="nav-btn next-btn" id="nextBtn" aria-label="下一页">›</button>
+
+  <div class="footer-bar">
+    <div class="dots" id="dots"></div>
+    <div style="font-size: 13px; color: var(--text-secondary);">使用 ← → 方向键或点击圆点切换</div>
+  </div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('dots');
+  const progress = document.getElementById('progress');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  let current = 0;
+  const total = slides.length;
+
+  function createDots() {
+    slides.forEach((_, i) => {
+      const dot = document.createElement('span');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', () => goTo(i));
+      dotsContainer.appendChild(dot);
+    });
+  }
+
+  function update() {
+    slides.forEach((slide, i) => {
+      slide.classList.remove('active', 'prev');
+      if (i === current) {
+        slide.classList.add('active');
+      } else if (i < current) {
+        slide.classList.add('prev');
+      }
+    });
+
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === current);
+    });
+
+    progress.style.width = ((current + 1) / total * 100) + '%';
+    prevBtn.style.opacity = current === 0 ? '0.3' : '1';
+    nextBtn.style.opacity = current === total - 1 ? '0.3' : '1';
+  }
+
+  function goTo(index) {
+    if (index < 0 || index >= total) return;
+    current = index;
+    update();
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+
+  createDots();
+  update();
+</script>
+
+</body>
+</html>
