@@ -403,12 +403,12 @@
     <div class="center">
       <div style="font-size: 18px; font-weight: 600; color: var(--accent); letter-spacing: 1px; margin-bottom: 24px;">SECRETFLOW / SECRETPAD 隐私保护体系</div>
       <h1>数据分类分级<br/>与本地隐私原语</h1>
-      <p class="subtitle">团队汇报与落地白皮书 · 联邦学习 & MPC 专题</p>
+      <p class="subtitle">三层隐私计算能力体系：识别 → 处理 → 协同</p>
       <div style="margin-top: 48px; display: flex; gap: 16px; justify-content: center;">
-        <span class="tag l3">数据分类分级</span>
-        <span class="tag l4">本地隐私原语</span>
-        <span class="tag l5">联邦学习 FL</span>
-        <span class="tag l2">安全多方计算 MPC</span>
+        <span class="tag l3">① 数据分类分级</span>
+        <span class="tag l4">② 本地隐私处理</span>
+        <span class="tag l5">③ 联邦学习 FL</span>
+        <span class="tag l2">③ 安全多方计算 MPC</span>
       </div>
     </div>
     <div class="slide-number">01 / 12</div>
@@ -425,8 +425,8 @@
       </div>
       <div class="card">
         <div class="card-icon">02</div>
-        <h3>能力建设</h3>
-        <p>分类分级是“眼睛”，本地隐私原语是“手”，FL/MPC 是“协同计算中的防护盾”。</p>
+        <h3>三层能力体系</h3>
+        <p>分类分级是“眼睛”，本地隐私处理是“手”，FL/MPC 是“协同计算中的防护盾”。</p>
       </div>
       <div class="card">
         <div class="card-icon">03</div>
@@ -486,33 +486,33 @@
 
   <!-- Slide 4: Value positioning -->
   <section class="slide">
-    <h2>价值定位：看见敏感 + 自动保护</h2>
+    <h2>价值定位：看见 → 处理 → 协同</h2>
     <div class="arrow-flow" style="justify-content: center; margin-top: 20px;">
       <div class="flow-box">数据接入</div>
       <span class="flow-arrow">→</span>
       <div class="flow-box">分类分级</div>
       <span class="flow-arrow">→</span>
-      <div class="flow-box">策略匹配</div>
+      <div class="flow-box">本地隐私处理</div>
       <span class="flow-arrow">→</span>
-      <div class="flow-box">隐私原语执行</div>
+      <div class="flow-box">联邦学习 / MPC</div>
       <span class="flow-arrow">→</span>
       <div class="flow-box">审计 + 预算台账</div>
     </div>
     <div class="grid-3" style="margin-top: 12px;">
       <div class="card accent">
         <div class="card-icon">👁</div>
-        <h3>识别</h3>
-        <p>自动判断字段、记录、整表的敏感等级（L1 ~ L5），输出可被下游消费的策略标签。</p>
+        <h3>① 识别</h3>
+        <p>自动判断字段、记录、整表、图片、手写病例的敏感等级（L1 ~ L5），输出可被下游消费的 SecurityTag。</p>
       </div>
       <div class="card accent">
         <div class="card-icon">🛡</div>
-        <h3>保护</h3>
-        <p>脱敏、K-匿名、差分隐私、查询混淆四类原语，支持批量组件与本地 SDK。</p>
+        <h3>② 处理</h3>
+        <p>脱敏、K-匿名、差分隐私、查询混淆四类原语，支持批量组件与本地 SDK，实现单点保护。</p>
       </div>
       <div class="card accent">
         <div class="card-icon">🔒</div>
-        <h3>协同</h3>
-        <p>FL / MPC 让跨机构计算在数据不可见的前提下完成，补全“识别 → 决策 → 执行 → 审计”闭环。</p>
+        <h3>③ 协同</h3>
+        <p>FL / MPC 让跨机构计算在原始数据不出域、不可见的前提下完成，补全“识别 → 处理 → 协同 → 审计”闭环。</p>
       </div>
     </div>
     <div class="slide-number">04 / 12</div>
@@ -520,7 +520,7 @@
 
   <!-- Slide 5: Classification -->
   <section class="slide">
-    <h2>数据分类分级：给数据贴“安全标签”</h2>
+    <h2>① 数据分类分级：给数据贴“安全标签”</h2>
     <div class="grid-2">
       <div>
         <h3 style="margin-bottom: 18px;">五级敏感标准</h3>
@@ -558,8 +558,8 @@
           <p class="small-text">ONNX 轻量模型，毫秒级，医疗命名实体识别</p>
         </div>
         <div class="card">
-          <strong>第三层 · LLM Classifier</strong>
-          <p class="small-text">医疗垂类大模型，秒级，旁路异步复核</p>
+          <strong>第三层 · VLM / LLM</strong>
+          <p class="small-text">本地多模态大模型 Qwen2-VL-2B，识别病例图片、手写病历、非结构化 OCR 文本，秒级旁路异步复核</p>
         </div>
       </div>
     </div>
@@ -568,7 +568,7 @@
 
   <!-- Slide 6: Local privacy primitives -->
   <section class="slide">
-    <h2>本地隐私保护原语：四类“保护动作”</h2>
+    <h2>② 本地隐私处理：四类“保护动作”</h2>
     <div class="grid-4">
       <div class="card">
         <div class="card-icon">🎭</div>
@@ -607,7 +607,7 @@
 
   <!-- Slide 7: FL & MPC (new section) -->
   <section class="slide">
-    <h2>联邦学习 & 安全多方计算</h2>
+    <h2>③ 联邦学习 & 安全多方计算</h2>
     <p class="subtitle" style="margin-top: -24px; margin-bottom: 28px;">把“数据可用不可见”从单点保护扩展到多方协同</p>
     <div class="grid-2">
       <div class="card">
@@ -794,20 +794,20 @@
       <h2 class="gradient-text">总结</h2>
       <p style="font-size: 26px; max-width: 900px; margin: 32px 0;">
         本项目不是单纯增加几个算法，而是构建一套<br/>
-        <strong>“识别 → 决策 → 执行 → 审计”</strong> 的隐私保护闭环。
+        <strong>“识别 → 处理 → 协同 → 审计”</strong> 的完整隐私计算平台体系。
       </p>
       <div class="grid-2" style="max-width: 900px; text-align: left;">
         <div class="card">
-          <h3>分类分级让平台“看得见”</h3>
-          <p class="small-text">自动识别 L1~L5 敏感等级，输出可消费的 SecurityTag。</p>
+          <h3>① 分类分级让平台“看得见”</h3>
+          <p class="small-text">自动识别结构化字段、文本、图片、手写病历的 L1~L5 敏感等级，输出可消费的 SecurityTag。</p>
         </div>
         <div class="card">
-          <h3>本地隐私原语让平台“管得住”</h3>
-          <p class="small-text">脱敏、K-匿名、DP、QOL 覆盖单点与批量场景。</p>
+          <h3>② 本地隐私处理让平台“管得住”</h3>
+          <p class="small-text">脱敏、K-匿名、DP、QOL 四类原语，覆盖单点与批量场景。</p>
         </div>
         <div class="card">
-          <h3>FL / MPC 让协同计算“不可见”</h3>
-          <p class="small-text">跨机构联合建模与统计，原始数据始终不出域。</p>
+          <h3>③ FL / MPC 让协同计算“不可见”</h3>
+          <p class="small-text">跨机构联合建模与统计，原始数据始终不出域、不可见。</p>
         </div>
         <div class="card">
           <h3>参数治理与审计让风险“可追溯”</h3>
