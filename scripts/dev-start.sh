@@ -57,10 +57,10 @@ SFWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # ------------------------------------------------------------------
 # 从 .env 文件加载环境变量配置
 # ------------------------------------------------------------------
-# DEV_START_ENV_FILE: 可自定义 env 文件路径,默认读取 sfwork 根目录的 .env
+# DEV_START_ENV_FILE: 可自定义 env 文件路径,默认读取 scripts 目录下的 .env
 # 使用 set -a / set +a 让 .env 中定义的所有变量自动 export 到当前 shell
-DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$SFWORK_ROOT/.env}"
-if [ -f "$DEV_START_ENV_FILE" ]; then
+DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$(dirname "${BASH_SOURCE[0]}")/.env}"
+if [[ -f "$DEV_START_ENV_FILE" ]]; then
     set -a
     # shellcheck source=/dev/null
     source "$DEV_START_ENV_FILE"
@@ -68,14 +68,22 @@ if [ -f "$DEV_START_ENV_FILE" ]; then
     echo "[INFO] 已加载环境变量配置:$DEV_START_ENV_FILE"
 fi
 
-# 各子项目路径
-SECRETPAD_DIR="$SFWORK_ROOT/secretpad"     # SecretPad 前后端源码
-SECRETFLOW_DIR="$SFWORK_ROOT/secretflow"   # SecretFlow 源码(含隐私计算组件)
-KUSCIA_DIR="$SFWORK_ROOT/kuscia"           # Kuscia 源码(本次未改动)
+# 各子项目路径 (定义为只读常量)
+readonly SECRETPAD_DIR="$SFWORK_ROOT/secretpad"     # SecretPad 前后端源码
+readonly SECRETFLOW_DIR="$SFWORK_ROOT/secretflow"   # SecretFlow 源码(含隐私计算组件)
+readonly KUSCIA_DIR="$SFWORK_ROOT/kuscia"           # Kuscia 源码(本次未改动)
+
+# 节点名称，支持通过环境变量或 .env 覆盖
+export ALICE_NAME="${ALICE_NAME:-alice}"
+export BOB_NAME="${BOB_NAME:-bob}"
+
+# INSTALL_DIR: Kuscia 安装目录 (若在环境变量或 .env 中设置，则导出)
+if [[ -n "${INSTALL_DIR:-}" ]]; then
+    export INSTALL_DIR
+fi
 
 # LOG_DIR: 聚合日志目录,后端/前端日志以及 PID 文件均存放于此
-LOG_DIR="$SFWORK_ROOT/logs"
-mkdir -p "$LOG_DIR"
+LOG_DIR="${LOG_DIR:-$SFWORK_ROOT/logs}"
 
 # PRIVACY_IMAGE: 自定义 SecretFlow 镜像 tag
 #   支持通过 .env 文件或环境变量覆盖,例如:
@@ -98,7 +106,7 @@ KUSCIA_IMAGE="${KUSCIA_IMAGE:-}"
 # RESET_KUSCIA: 是否在启动前重置 Kuscia 容器及其数据目录
 #   当自定义镜像发生变更(如新增/修改 SecretFlow 组件)后,旧 Kuscia 中注册的
 #   secretflow AppImage 仍指向旧镜像,会导致新组件找不到.此时需要重置.
-RESET_KUSCIA=false
+RESET_KUSCIA="${RESET_KUSCIA:-false}"
 
 # CONDA_ENV: 构建 SecretFlow wheel 时使用的 conda 环境名称
 CONDA_ENV="${CONDA_ENV:-sf310}"
@@ -107,11 +115,11 @@ CONDA_ENV="${CONDA_ENV:-sf310}"
 # 颜色与日志系统
 # ------------------------------------------------------------------
 # ANSI 转义码,用于终端彩色输出,提升可读性
-RED='\033[0;31m'      # 红色:错误
-GREEN='\033[0;32m'    # 绿色:成功/信息
-YELLOW='\033[1;33m'   # 黄色:警告
-BLUE='\033[0;34m'     # 蓝色:步骤提示
-NC='\033[0m'          # 重置颜色
+readonly RED='\033[0;31m'      # 红色:错误
+readonly GREEN='\033[0;32m'    # 绿色:成功/信息
+readonly YELLOW='\033[1;33m'   # 黄色:警告
+readonly BLUE='\033[0;34m'     # 蓝色:步骤提示
+readonly NC='\033[0m'          # 重置颜色
 
 # 日志函数:统一格式化输出
 # log_error 重定向到 stderr,便于外部脚本或 CI 捕获错误
@@ -123,24 +131,28 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 # ------------------------------------------------------------------
 # 检查子项目是否已克隆
 # sfwork 根仓库只包含编排脚本与文档,子项目源码需要通过 scripts/clone-repos.sh 克隆
-missing_dirs=()
-for dir in "$SECRETPAD_DIR" "$SECRETFLOW_DIR" "$KUSCIA_DIR"; do
-    if [ ! -d "$dir" ]; then
-        missing_dirs+=("$dir")
-    fi
-done
-# secretpad 前端源码在独立仓库,需要克隆到 secretpad/frontend-src/
-if [ ! -d "$SECRETPAD_DIR/frontend-src" ]; then
-    missing_dirs+=("$SECRETPAD_DIR/frontend-src")
-fi
-if [ ${#missing_dirs[@]} -gt 0 ]; then
-    log_error "以下子项目目录不存在:"
-    for dir in "${missing_dirs[@]}"; do
-        log_error "  - $dir"
+# ------------------------------------------------------------------
+check_cloned_repositories() {
+    local missing_dirs=()
+    local dir
+    for dir in "$SECRETPAD_DIR" "$SECRETFLOW_DIR" "$KUSCIA_DIR"; do
+        if [[ ! -d "$dir" ]]; then
+            missing_dirs+=("$dir")
+        fi
     done
-    log_error "请先执行子项目克隆脚本:bash scripts/clone-repos.sh"
-    exit 1
-fi
+    # secretpad 前端源码在独立仓库,需要克隆到 secretpad/frontend-src/
+    if [[ ! -d "$SECRETPAD_DIR/frontend-src" ]]; then
+        missing_dirs+=("$SECRETPAD_DIR/frontend-src")
+    fi
+    if (( ${#missing_dirs[@]} > 0 )); then
+        log_error "以下子项目目录不存在:"
+        for dir in "${missing_dirs[@]}"; do
+            log_error "  - $dir"
+        done
+        log_error "请先执行子项目克隆脚本:bash scripts/clone-repos.sh"
+        exit 1
+    fi
+}
 
 # ------------------------------------------------------------------
 # 工具函数库
@@ -396,7 +408,9 @@ port_pid() {
 #   用途:用于判断端口占用是否来自本脚本之前启动的进程,避免误杀其他服务.
 read_pidfile() {
     local f="$1"
-    if [ -f "$f" ]; then cat "$f"; fi
+    if [[ -f "$f" ]]; then
+        cat "$f"
+    fi
 }
 
 # wait_for_port
@@ -408,29 +422,12 @@ read_pidfile() {
 #     $4 - 服务名称(用于日志)
 #   返回:0=在超时前端口就绪,1=超时未就绪
 #   优势:服务就绪后立即返回,比固定 sleep 更智能.
-port_is_listening() {
-    local port="$1"
-    if is_macos; then
-        # macOS 没有 ss,使用 lsof 检测监听端口
-        command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
-    else
-        # Linux 优先使用 ss
-        if command -v ss >/dev/null 2>&1; then
-            ss -tln 2>/dev/null | grep -qE ":$port($|[[:space:]])"
-        elif command -v netstat >/dev/null 2>&1; then
-            netstat -tln 2>/dev/null | grep -qE ":[0-9]+\.[0-9]+:[0-9]+\s+|[.:]$port[[:space:]]+.*LISTEN"
-        else
-            return 1
-        fi
-    fi
-}
-
 wait_for_port() {
     local host="$1" port="$2" timeout_sec="${3:-60}" what="$4"
     log_info "等待 $what 就绪:$host:$port(最多 ${timeout_sec}s)..."
-    # C 语言风格 for 循环,从 0 计数到 timeout_sec-1
+    local i
     for ((i = 0; i < timeout_sec; i++)); do
-        if port_is_listening "$port"; then
+        if port_in_use "$port"; then
             log_info "$what 已就绪"
             return 0
         fi
@@ -608,12 +605,12 @@ build_secretflow_image() {
     python -m build --wheel
 
     # 查找构建出的 wheel 文件(按文件名通配,避免硬编码版本号)
-    local wheel
-    wheel="$(ls "$SECRETFLOW_DIR"/dist/secretflow-*.whl | head -1)"
-    if [ -z "$wheel" ]; then
+    local wheels=("$SECRETFLOW_DIR"/dist/secretflow-*.whl)
+    if [[ ! -f "${wheels[0]}" ]]; then
         log_error "未找到构建出的 wheel 文件"
         exit 1
     fi
+    local wheel="${wheels[0]}"
     log_info "wheel 文件:$wheel"
 
     # 将 wheel 复制到 Dockerfile 所在目录作为构建上下文
@@ -669,8 +666,8 @@ reset_kuscia() {
     # 数组:需要删除的容器名.${USER} 展开为当前用户名,与 install-kuscia-only.sh 命名保持一致.
     local containers=(
         "${USER}-kuscia-master"
-        "${USER}-kuscia-lite-alice"
-        "${USER}-kuscia-lite-bob"
+        "${USER}-kuscia-lite-${ALICE_NAME}"
+        "${USER}-kuscia-lite-${BOB_NAME}"
     )
     # for ... in 遍历数组;${containers[@]} 展开为数组元素列表.
     for ctr in "${containers[@]}"; do
@@ -800,8 +797,8 @@ import_custom_image_to_kuscia() {
     if [ "$RESET_KUSCIA" = true ]; then
         log_info "Kuscia 已重置,强制重新导入自定义镜像 ..."
     fi
-    import_custom_image_to_lite alice
-    import_custom_image_to_lite bob
+    import_custom_image_to_lite "$ALICE_NAME"
+    import_custom_image_to_lite "$BOB_NAME"
 }
 
 # start_backend
@@ -916,28 +913,31 @@ print_summary() {
 }
 
 # ------------------------------------------------------------------
-# 命令行参数解析
+# Main entrypoint
 # ------------------------------------------------------------------
-# 支持模式:
-#   --check / -c: 仅检查环境
-#   --help / -h:  显示帮助
-#   --reset-kuscia: 设置 RESET_KUSCIA=true 后继续执行完整启动流程
-#   无参数:       执行完整启动流程
-case "${1:-}" in
---check | -c)
-    check_environment
-    echo ""
-    log_info "环境检查通过"
-    exit 0
-    ;;
---reset-kuscia)
-    # 设置标志后 shift,然后继续执行 case 之后的启动流程
-    RESET_KUSCIA=true
-    shift
-    ;;
---help | -h)
-    # here-document:从 <<EOF 到 EOF 之间的内容作为 cat 的输入,用于输出多行帮助文本
-    cat <<EOF
+main() {
+    # 命令行参数解析
+    # 支持模式:
+    #   --check / -c: 仅检查环境
+    #   --help / -h:  显示帮助
+    #   --reset-kuscia: 设置 RESET_KUSCIA=true 后继续执行完整启动流程
+    #   无参数:       执行完整启动流程
+    case "${1:-}" in
+    --check | -c)
+        check_cloned_repositories
+        check_environment
+        echo ""
+        log_info "环境检查通过"
+        exit 0
+        ;;
+    --reset-kuscia)
+        # 设置标志后 shift,然后继续执行 case 之后的启动流程
+        RESET_KUSCIA=true
+        shift
+        ;;
+    --help | -h)
+        # here-document:从 <<EOF 到 EOF 之间的内容作为 cat 的输入,用于输出多行帮助文本
+        cat <<EOF
 sfwork 二次开发环境一键启动脚本(使用自定义 SecretFlow 镜像)
 
 用法:
@@ -962,35 +962,40 @@ sfwork 二次开发环境一键启动脚本(使用自定义 SecretFlow 镜像)
 重置 Kuscia(自定义镜像更新后必需):
   bash scripts/dev-start.sh --reset-kuscia
 EOF
-    exit 0
-    ;;
-esac
+        exit 0
+        ;;
+    esac
 
-# ------------------------------------------------------------------
-# 主启动流程
-# ------------------------------------------------------------------
-# 严格按照依赖关系执行:
-#   1. 检查环境
-#   2. 检查端口
-#   3. 生成证书
-#   4. 编译后端
-#   5. 构建自定义 SecretFlow 镜像
-#   6. 部署 Kuscia
-#   7. 启动后端
-#   8. 启动前端
-#   9. 打印摘要
-#
-# set -euo pipefail 保证任一步骤失败会立即退出并返回非零状态码
-check_environment
-check_required_ports
-generate_certs
-build_backend
-build_secretflow_image
-if [ "$RESET_KUSCIA" = true ]; then
-    reset_kuscia
-fi
-start_kuscia
-import_custom_image_to_kuscia
-start_backend
-start_frontend
-print_summary
+    # 主启动流程:
+    # 严格按照依赖关系执行:
+    #   1. 检查子项目是否克隆
+    #   2. 创建日志目录
+    #   3. 检查环境
+    #   4. 检查端口
+    #   5. 生成证书
+    #   6. 编译后端
+    #   7. 构建自定义 SecretFlow 镜像
+    #   8. 部署 Kuscia
+    #   9. 启动后端
+    #   10. 启动前端
+    #   11. 打印摘要
+    check_cloned_repositories
+    mkdir -p "$LOG_DIR"
+
+    check_environment
+    check_required_ports
+    generate_certs
+    build_backend
+    build_secretflow_image
+    if [[ "$RESET_KUSCIA" == "true" ]]; then
+        reset_kuscia
+    fi
+    start_kuscia
+    import_custom_image_to_kuscia
+    start_backend
+    start_frontend
+    print_summary
+}
+
+# Run the main function
+main "$@"

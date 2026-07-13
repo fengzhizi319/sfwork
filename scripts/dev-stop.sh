@@ -32,11 +32,9 @@ set -euo pipefail
 SFWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # ------------------------------------------------------------------
-# 从 .env 文件加载环境变量配置
-# ------------------------------------------------------------------
-# DEV_START_ENV_FILE: 可自定义 env 文件路径，默认读取 sfwork 根目录的 .env
+# DEV_START_ENV_FILE: 可自定义 env 文件路径，默认读取 scripts 目录下的 .env
 # 使用 set -a / set +a 让 .env 中定义的所有变量自动 export 到当前 shell
-DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$SFWORK_ROOT/.env}"
+DEV_START_ENV_FILE="${DEV_START_ENV_FILE:-$(dirname "${BASH_SOURCE[0]}")/.env}"
 if [ -f "$DEV_START_ENV_FILE" ]; then
     set -a
     # shellcheck source=/dev/null
@@ -44,6 +42,10 @@ if [ -f "$DEV_START_ENV_FILE" ]; then
     set +a
     echo "[INFO] 已加载环境变量配置：$DEV_START_ENV_FILE"
 fi
+
+# 节点名称，支持通过环境变量或 .env 覆盖
+ALICE_NAME="${ALICE_NAME:-alice}"
+BOB_NAME="${BOB_NAME:-bob}"
 
 # LOG_DIR: 与 dev-start.sh 保持一致，PID 文件存放目录
 LOG_DIR="$SFWORK_ROOT/logs"
@@ -103,7 +105,7 @@ stop_pidfile "$LOG_DIR/frontend.pid" "前端"
 if [ "${1:-}" = "--kuscia" ]; then
     echo "停止 Kuscia 容器 ..."
     # 2>/dev/null 隐藏“容器未运行”等错误；|| true 保证任一容器不存在时脚本仍正常退出
-    docker stop "${USER}-kuscia-master" "${USER}-kuscia-lite-alice" "${USER}-kuscia-lite-bob" 2>/dev/null || true
+    docker stop "${USER}-kuscia-master" "${USER}-kuscia-lite-${ALICE_NAME}" "${USER}-kuscia-lite-${BOB_NAME}" 2>/dev/null || true
 fi
 
 echo "完成"
