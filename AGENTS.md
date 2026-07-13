@@ -3,6 +3,9 @@
 This guide describes the `sfwork` workspace for AI coding agents. The workspace is a mono-repo-like directory that bundles the four main repositories of the SecretFlow privacy-preserving computing ecosystem. Read this first before touching any code.
 
 > **Documentation language note**: The projects maintain both English and Chinese documentation. The most detailed operation guides (e.g. `无docker运行说明.md`, `运行说明.md`) are in Chinese, while architecture summaries such as `PROJECT_SUMMARY.md` are in English. Code comments are often bilingual.
+>
+> **Centralized docs**: All project documentation is organized and copied to `docs/doc-center/`. Start with `docs/doc-center/README.md` to find the right document by category.  
+> **Agent skills**: Project-level Kimi skills live in `.agents/skills/`. Use them for doc lookup, frontend/backend/Kuscia workflows, and workspace orientation.
 
 ---
 
@@ -47,6 +50,33 @@ SecretFlow (Python)  ← executes privacy-preserving algorithms inside container
 ```
 
 Data access is mediated by **DataMesh** (part of Kuscia) using gRPC and Apache Arrow Flight.
+
+### 1.2 c-life Privacy Computing Platform
+
+The platform is positioned as a full-stack privacy computing system with three capability layers:
+
+```
+Data Ingest → Classification (L1~L5) → Local Privacy Processing → FL / MPC → Audit & Budget
+```
+
+- **Classification**: Rule Engine → Small-NER → local VLM/LLM for multimodal medical data.
+- **Local Privacy**: Masking, K-anonymity, Differential Privacy, Query Obfuscation.
+- **FL / MPC**: Cross-domain collaborative computing with data available but invisible.
+
+The detailed whitepaper and presentation are in `docs/doc-center/00-项目总览/`.
+
+### 1.3 Documentation Center & Agent Skills
+
+| Resource | Path | Purpose |
+|---|---|---|
+| Centralized docs | `docs/doc-center/README.md` | Categorized archive of all sfwork / frontend / backend / Kuscia docs |
+| Project whitepaper | `docs/doc-center/00-项目总览/数据分类分级与本地隐私原语-团队汇报与落地白皮书.md` | Full-stack privacy computing overview |
+| Presentation | `docs/doc-center/00-项目总览/数据分类分级与本地隐私原语-汇报PPT.html` | HTML slide deck |
+| Workspace skill | `.agents/skills/sfwork-workspace/SKILL.md` | Workspace orientation and cross-project commands |
+| Doc reader skill | `.agents/skills/doc-center-reader/SKILL.md` | How to navigate docs/doc-center |
+| Frontend skill | `.agents/skills/secretpad-frontend-dev/SKILL.md` | Frontend development workflow |
+| Backend skill | `.agents/skills/secretpad-backend-dev/SKILL.md` | Backend development workflow |
+| Kuscia skill | `.agents/skills/kuscia-dev/SKILL.md` | Kuscia development workflow |
 
 ---
 
@@ -385,6 +415,25 @@ Default local ports:
 
 Dev login: `admin` / `12345678`.
 
+### Local development with Docker Kuscia
+
+When Kuscia master + alice + bob are running via local Docker with host port mappings (as in the current setup), use these connection parameters for SecretPad backend:
+
+| Env Var | Value | Notes |
+|---|---|---|
+| `KUSCIA_API_ADDRESS` | `127.0.0.1` | Kuscia API gRPC host |
+| `KUSCIA_API_PORT` | `18083` | Mapped from container port 8083 |
+| `KUSCIA_GW_ADDRESS` | `127.0.0.1:13081` | Mapped from container Envoy port 80/1080 |
+| `KUSCIA_PROTOCOL` | `notls` | Dev profile, no mTLS |
+
+Backend data path should point to the host bind mount of Kuscia master data, e.g.:
+
+```bash
+-Dsecretpad.data.dir-path=/home/charles/kuscia/master/data/
+```
+
+The startup helper `scripts/dev-start.sh` sets this automatically.
+
 ### Key Kuscia ports (Docker deployment)
 | Service | Default Port |
 |---|---|
@@ -438,14 +487,15 @@ rm -f config/server.jks
 rm -rf config/certs/
 bash scripts/test/setup.sh
 
-# 6. Start SecretPad backend
+# 6. Start SecretPad backend (adjust ports for Docker Kuscia vs non-Docker)
 export KUSCIA_API_ADDRESS=127.0.0.1
-export KUSCIA_API_PORT=8083
-export KUSCIA_GW_ADDRESS=127.0.0.1:80
+export KUSCIA_API_PORT=18083      # use 8083 for non-Docker Kuscia
+export KUSCIA_GW_ADDRESS=127.0.0.1:13081  # use 127.0.0.1:80 for non-Docker
 export KUSCIA_PROTOCOL=notls
 java -Dspring.profiles.active=dev \
      -Dsun.net.http.allowRestrictedHeaders=true \
      -Dserver.port=8443 \
+     -Dsecretpad.data.dir-path=/home/charles/kuscia/master/data/ \
      -jar target/secretpad.jar
 
 # 7. Start SecretPad frontend
@@ -486,7 +536,9 @@ When modifying code, understand which layer owns the contract:
 ## 12. Common Development Workflow
 
 1. **Start from the root**: `/home/charles/code/sfwork`.
-2. **Run everything**: `bash scripts/run-all-no-docker.sh`.
+2. **Choose a launcher**:
+   - Non-Docker all-in-one: `bash scripts/run-all-no-docker.sh`
+   - Docker Kuscia + local backend/frontend: `bash scripts/dev-start.sh`
 3. **Make backend changes**: `cd secretpad && mvn clean install -Dmaven.test.skip=true`, restart backend.
 4. **Make frontend changes**: `cd secretpad/frontend-src && pnpm --filter secretpad dev` supports hot reload.
 5. **Make Kuscia changes**: `cd kuscia && bash hack/build.sh -t kuscia`, then restart Kuscia Master.
@@ -508,8 +560,10 @@ When modifying code, understand which layer owns the contract:
 | Build SecretPad image | `cd secretpad && make image` |
 | Bootstrap frontend | `cd secretpad/frontend-src && pnpm bootstrap` |
 | Dev frontend | `cd secretpad/frontend-src && pnpm --filter secretpad dev` |
-| Run all locally | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh` |
-| Stop all locally | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop` |
+| Run all locally (non-Docker) | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh` |
+| Stop all locally (non-Docker) | `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop` |
+| Start with Docker Kuscia | `bash /home/charles/code/sfwork/scripts/dev-start.sh` |
+| Stop Docker Kuscia setup | `bash /home/charles/code/sfwork/scripts/dev-start.sh --stop` |
 | Test privacy-java-sdk | `cd privacy-java-sdk && mvn test` |
 | Test privacy-go-sdk | `cd privacy-go-sdk && go test ./...` |
 | Test privacy-local-agent | `cd privacy-local-agent && PYTHONPATH=. pytest tests -q` |
