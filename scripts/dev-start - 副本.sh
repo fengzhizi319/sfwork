@@ -21,7 +21,7 @@
 #   - 后端、前端均从 sfwork/secretpad 本地源码启动,便于源码调试.
 #
 # 前置条件:
-#   - sfwork 已克隆到任意目录(脚本会自动推导根目录)
+#   - sfwork 已克隆到 /home/charles/code/sfwork
 #   - 已创建 conda 环境 sf310(仅在构建 SecretFlow 镜像时需要)
 #   - Docker 可用且当前用户有权限执行 docker 命令
 #
@@ -820,10 +820,6 @@ start_backend() {
     # 否则先清理可能残留的 PID 文件和进程
     stop_service_by_pidfile "$pidfile" "backend"
 
-    # 切换到 SecretPad 项目目录,确保 SQLite 相对路径(./db/secretpad.sqlite)
-    # 和 Flyway 迁移脚本路径(filesystem:./config/schema/center)解析正确
-    cd "$SECRETPAD_DIR"
-
     export KUSCIA_API_ADDRESS=127.0.0.1
     export KUSCIA_API_PORT=18083
     export KUSCIA_GW_ADDRESS=127.0.0.1:13081
@@ -866,25 +862,13 @@ start_frontend() {
     stop_service_by_pidfile "$pidfile" "frontend"
 
     # 确保前端代理配置指向本地后端 HTTP 端口
-    # 无论 sfwork 在哪个目录,代理地址始终为 http://127.0.0.1:8080
     local env_file="$SECRETPAD_DIR/frontend-src/apps/platform/.env"
-    mkdir -p "$(dirname "$env_file")"
-
-    # 如果文件不存在或没有 PROXY_URL 配置,则创建/更新
     if [ ! -f "$env_file" ]; then
+        # 文件不存在时直接创建并写入 PROXY_URL
         echo "PROXY_URL=http://127.0.0.1:8080" > "$env_file"
-        log_info "已创建前端代理配置文件:$env_file"
     elif ! grep -q '^PROXY_URL=' "$env_file" 2>/dev/null; then
+        # 文件存在但缺少 PROXY_URL 时追加一行
         echo "PROXY_URL=http://127.0.0.1:8080" >> "$env_file"
-        log_info "已添加前端代理配置到:$env_file"
-    else
-        # 文件存在且已有 PROXY_URL,检查是否正确
-        local current_proxy
-        current_proxy=$(grep '^PROXY_URL=' "$env_file" | head -1 | cut -d'=' -f2-)
-        if [ "$current_proxy" != "http://127.0.0.1:8080" ]; then
-            log_warn "检测到前端代理配置为 $current_proxy,将更新为 http://127.0.0.1:8080"
-            sed -i 's|^PROXY_URL=.*|PROXY_URL=http://127.0.0.1:8080|' "$env_file"
-        fi
     fi
 
     cd "$SECRETPAD_DIR/frontend-src"
