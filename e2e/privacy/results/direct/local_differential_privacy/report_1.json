@@ -1,0 +1,63 @@
+{
+  "name": "local_differential_privacy",
+  "tabs": [
+    {
+      "name": "perturbation",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "op",
+                    "type": "str"
+                  },
+                  {
+                    "name": "mechanism",
+                    "type": "str"
+                  },
+                  {
+                    "name": "query_col",
+                    "type": "str"
+                  },
+                  {
+                    "name": "count",
+                    "type": "int"
+                  },
+                  {
+                    "name": "epsilon",
+                    "type": "float"
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "s": "perturb"
+                      },
+                      {
+                        "s": "binary_rr"
+                      },
+                      {
+                        "s": "has_disease"
+                      },
+                      {
+                        "i64": "100"
+                      },
+                      {
+                        "f": 1.0
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

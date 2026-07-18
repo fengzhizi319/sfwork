@@ -1,0 +1,106 @@
+{
+  "data_classification": {
+    "component": {
+      "domain": "privacy",
+      "name": "data_classification",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "mode": "auto",
+      "mode/auto/default_level": "L3"
+    },
+    "output_0": "data_classification/output_0.csv",
+    "report_1": "data_classification/report_1.json"
+  },
+  "differential_privacy": {
+    "component": {
+      "domain": "privacy",
+      "name": "differential_privacy",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query_type": "sum",
+      "query_col": "salary",
+      "epsilon_total": 10.0,
+      "delta": 0.0,
+      "epsilon_per_query": 1.0,
+      "delta_per_query": 0.0,
+      "mechanism": "laplace",
+      "column_sensitivities_json": "{}",
+      "bins_json": "[]",
+      "random_state": 42,
+      "min_count": 5.0,
+      "mode": "explicit_clip",
+      "mode/explicit_clip/clip_lower": 0.0,
+      "mode/explicit_clip/clip_upper": 50000.0
+    },
+    "report_0": "differential_privacy/report_0.json"
+  },
+  "k_anonymity": {
+    "component": {
+      "domain": "privacy",
+      "name": "k_anonymity",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "k": 2,
+      "qi_cols_json": "[\"age\",\"zipcode\"]",
+      "sa_cols_json": "[\"diagnosis\"]",
+      "suppression_rate": 0.05,
+      "report_result": true,
+      "max_depth": 10,
+      "hierarchies_json": "{}"
+    },
+    "output_0": "k_anonymity/output_0.csv",
+    "report_1": "k_anonymity/report_1.json"
+  },
+  "local_differential_privacy": {
+    "component": {
+      "domain": "privacy",
+      "name": "local_differential_privacy",
+      "version": "1.0.0"
+    },
+    "attrs": {
+      "op": "perturb",
+      "mechanism": "binary_rr",
+      "query_col": [
+        "has_disease"
+      ],
+      "epsilon": 1.0,
+      "categories_json": "[]",
+      "random_state": 42
+    },
+    "output_0": "local_differential_privacy/output_0.csv",
+    "report_1": "local_differential_privacy/report_1.json"
+  },
+  "query_obfuscation": {
+    "component": {
+      "domain": "privacy",
+      "name": "query_obfuscation",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query": "患者张三患有艾滋病，如何查询相关诊疗方案",
+      "synonym_map_json": "{}",
+      "num_dummies": 3,
+      "domain": "medical",
+      "medical_pool_json": "[]",
+      "generic_pool_json": "[]",
+      "random_state": 42
+    },
+    "report_0": "query_obfuscation/report_0.json"
+  },
+  "sanitization": {
+    "component": {
+      "domain": "privacy",
+      "name": "sanitization",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "rules_json": "[{\"column\":\"mobile\",\"method\":\"mask_mobile\",\"params\":{}},{\"column\":\"id_card\",\"method\":\"mask_id_card\",\"params\":{}},{\"column\":\"name\",\"method\":\"mask_name\",\"params\":{}}]",
+      "report_audit": true
+    },
+    "output_0": "sanitization/output_0.csv",
+    "report_1": "sanitization/report_1.json"
+  }
+}

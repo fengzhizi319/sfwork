@@ -1,0 +1,13 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "data_classification",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "mode": "auto",
+    "mode/auto/default_level": "L3"
+  },
+  "input_data": "medical_records.csv",
+  "input_party": "alice"
+}

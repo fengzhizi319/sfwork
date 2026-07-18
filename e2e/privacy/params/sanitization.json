@@ -1,0 +1,13 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "sanitization",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "rules_json": "[{\"column\":\"mobile\",\"method\":\"mask_mobile\",\"params\":{}},{\"column\":\"id_card\",\"method\":\"mask_id_card\",\"params\":{}},{\"column\":\"name\",\"method\":\"mask_name\",\"params\":{}}]",
+    "report_audit": true
+  },
+  "input_data": "medical_records.csv",
+  "input_party": "alice"
+}

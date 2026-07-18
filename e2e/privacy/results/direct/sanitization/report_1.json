@@ -1,0 +1,116 @@
+{
+  "name": "sanitization",
+  "tabs": [
+    {
+      "name": "audit_alice",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "party",
+                    "type": "str"
+                  },
+                  {
+                    "name": "column",
+                    "type": "str"
+                  },
+                  {
+                    "name": "method",
+                    "type": "str"
+                  },
+                  {
+                    "name": "affected_rows",
+                    "type": "int"
+                  },
+                  {
+                    "name": "sample_before",
+                    "type": "str"
+                  },
+                  {
+                    "name": "sample_after",
+                    "type": "str"
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "s": "alice"
+                      },
+                      {
+                        "s": "mobile"
+                      },
+                      {
+                        "s": "mask_mobile"
+                      },
+                      {
+                        "i64": "8"
+                      },
+                      {
+                        "s": "13800138000"
+                      },
+                      {
+                        "s": "138****8000"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "1",
+                    "items": [
+                      {
+                        "s": "alice"
+                      },
+                      {
+                        "s": "id_card"
+                      },
+                      {
+                        "s": "mask_id_card"
+                      },
+                      {
+                        "i64": "8"
+                      },
+                      {
+                        "s": "110101199001011237"
+                      },
+                      {
+                        "s": "110101********1237"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "2",
+                    "items": [
+                      {
+                        "s": "alice"
+                      },
+                      {
+                        "s": "name"
+                      },
+                      {
+                        "s": "mask_name"
+                      },
+                      {
+                        "i64": "8"
+                      },
+                      {
+                        "s": "Alice"
+                      },
+                      {
+                        "s": "A**e"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

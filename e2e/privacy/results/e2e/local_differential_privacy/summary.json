@@ -1,0 +1,19 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "local_differential_privacy",
+    "version": "1.0.0"
+  },
+  "attrs": {
+    "op": "perturb",
+    "mechanism": "binary_rr",
+    "query_col": [
+      "has_disease"
+    ],
+    "epsilon": 1.0,
+    "categories_json": "[]",
+    "random_state": 42
+  },
+  "output_0": "local_differential_privacy/output_0.csv",
+  "report_1": "local_differential_privacy/report_1.json"
+}

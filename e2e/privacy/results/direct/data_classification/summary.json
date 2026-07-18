@@ -1,0 +1,13 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "data_classification",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "mode": "auto",
+    "mode/auto/default_level": "L3"
+  },
+  "output_0": "data_classification/output_0.csv",
+  "report_1": "data_classification/report_1.json"
+}

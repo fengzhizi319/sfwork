@@ -1,0 +1,18 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "k_anonymity",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "k": 2,
+    "qi_cols_json": "[\"age\",\"zipcode\"]",
+    "sa_cols_json": "[\"diagnosis\"]",
+    "suppression_rate": 0.05,
+    "report_result": true,
+    "max_depth": 10,
+    "hierarchies_json": "{}"
+  },
+  "output_0": "k_anonymity/output_0.csv",
+  "report_1": "k_anonymity/report_1.json"
+}

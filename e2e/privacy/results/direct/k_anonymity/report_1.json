@@ -1,0 +1,54 @@
+{
+  "name": "k_anonymity",
+  "tabs": [
+    {
+      "name": "summary",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "k",
+                    "type": "int"
+                  },
+                  {
+                    "name": "is_k_anonymous",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "suppression_count",
+                    "type": "int"
+                  },
+                  {
+                    "name": "equivalence_classes",
+                    "type": "int"
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "i64": "2"
+                      },
+                      {
+                        "b": true
+                      },
+                      {},
+                      {
+                        "i64": "4"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "tabs": [
+    {
+      "name": "summary",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "k",
+                    "type": "int",
+                    "desc": ""
+                  },
+                  {
+                    "name": "is_k_anonymous",
+                    "type": "bool",
+                    "desc": ""
+                  },
+                  {
+                    "name": "suppression_count",
+                    "type": "int",
+                    "desc": ""
+                  },
+                  {
+                    "name": "equivalence_classes",
+                    "type": "int",
+                    "desc": ""
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "i64": "2",
+                        "f": 0.0,
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "b": true,
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "i64": "4",
+                        "f": 0.0,
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      }
+                    ],
+                    "desc": ""
+                  }
+                ],
+                "name": "",
+                "desc": ""
+              }
+            }
+          ],
+          "name": "",
+          "desc": ""
+        }
+      ],
+      "desc": ""
+    }
+  ]
+}

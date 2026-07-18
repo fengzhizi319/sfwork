@@ -1,0 +1,113 @@
+{
+  "tabs": [
+    {
+      "name": "obfuscation",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "real_query",
+                    "type": "str",
+                    "desc": ""
+                  },
+                  {
+                    "name": "real_index",
+                    "type": "int",
+                    "desc": ""
+                  },
+                  {
+                    "name": "num_obfuscated_queries",
+                    "type": "int",
+                    "desc": ""
+                  },
+                  {
+                    "name": "dummy_queries",
+                    "type": "str",
+                    "desc": ""
+                  },
+                  {
+                    "name": "obfuscated_queries",
+                    "type": "str",
+                    "desc": ""
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "s": "患者张三患有艾滋病，如何查询相关诊疗方案",
+                        "f": 0.0,
+                        "i64": "0",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "i64": "4",
+                        "f": 0.0,
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "s": "[\"流感疫苗接种人群建议\", \"高血压患者的日常饮食建议\", \"抑郁症自我调理与心理疏导\"]",
+                        "f": 0.0,
+                        "i64": "0",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "s": "[\"患者张三患有艾滋病，如何查询相关诊疗方案\", \"抑郁症自我调理与心理疏导\", \"流感疫苗接种人群建议\", \"高血压患者的日常饮食建议\"]",
+                        "f": 0.0,
+                        "i64": "0",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      }
+                    ],
+                    "desc": ""
+                  }
+                ],
+                "name": "",
+                "desc": ""
+              }
+            }
+          ],
+          "name": "",
+          "desc": ""
+        }
+      ],
+      "desc": ""
+    }
+  ]
+}
