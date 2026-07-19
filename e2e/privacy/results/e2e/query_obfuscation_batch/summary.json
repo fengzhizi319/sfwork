@@ -1,0 +1,19 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "query_obfuscation",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "op": "batch",
+    "query": "",
+    "queries_json": "[\"患者张三患有艾滋病，如何查询相关诊疗方案\", \"患者李四患有高血压，如何查询相关诊疗方案\"]",
+    "synonym_map_json": "{}",
+    "num_dummies": 3,
+    "random_state": 42,
+    "domain": "medical",
+    "medical_pool_json": "[]",
+    "generic_pool_json": "[]"
+  },
+  "report_0": "query_obfuscation_batch/report_0.json"
+}

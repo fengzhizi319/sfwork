@@ -1,0 +1,27 @@
+{
+  "component": {
+    "domain": "privacy",
+    "name": "differential_privacy",
+    "version": "1.1.0"
+  },
+  "attrs": {
+    "query_type": "noisy_count",
+    "query_col": "",
+    "epsilon_total": 1.0,
+    "delta": 0.0,
+    "epsilon_per_query": 1.0,
+    "delta_per_query": 0.0,
+    "mechanism": "laplace",
+    "column_sensitivities_json": "{}",
+    "bins_json": "[]",
+    "true_count": 1000.0,
+    "true_sum": 0.0,
+    "true_counts_json": "{}",
+    "sensitivity": 1.0,
+    "random_state": 42,
+    "min_count": 5.0,
+    "mode": "use_column_sensitivity"
+  },
+  "input_data": "salary_stats.csv",
+  "input_party": "alice"
+}

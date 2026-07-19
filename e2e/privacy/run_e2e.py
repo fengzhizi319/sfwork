@@ -370,10 +370,11 @@ def _dtype_to_col_type(dtype: str) -> str:
 
 
 def _build_graph_nodes(
-    graph_id: str, param: Dict, datatable_id: str, has_input: bool
+    graph_id: str, param: Dict, datatable_id: Optional[str]
 ) -> List[Dict]:
+    has_input = param.get("input_data") is not None
     nodes = []
-    if has_input:
+    if datatable_id is not None:
         nodes.append(
             {
                 "codeName": "read_data/datatable",
@@ -393,12 +394,10 @@ def _build_graph_nodes(
             }
         )
         comp_node_id = f"{graph_id}-node-2"
-        comp_input = [f"{graph_id}-node-1-output-0"]
-        comp_output_idx = 0
+        comp_input = [f"{graph_id}-node-1-output-0"] if has_input else []
     else:
         comp_node_id = f"{graph_id}-node-1"
         comp_input = []
-        comp_output_idx = -1
 
     comp = param["component"]
     attr_paths, attr_values = _build_attr_paths(param["attrs"])
@@ -427,8 +426,8 @@ def _build_graph_nodes(
     return nodes
 
 
-def _build_graph_edges(graph_id: str, has_input: bool) -> List[Dict]:
-    if not has_input:
+def _build_graph_edges(graph_id: str, param: Dict) -> List[Dict]:
+    if param.get("input_data") is None:
         return []
     return [
         {
@@ -444,6 +443,7 @@ def _build_graph_edges(graph_id: str, has_input: bool) -> List[Dict]:
 def run_e2e_component(
     client: SecretPadClient,
     param: Dict,
+    comp_key: str,
     data_dir: Path,
     out_dir: Path,
     node_id: str = "alice",
@@ -462,8 +462,9 @@ def run_e2e_component(
     time.sleep(2)
 
     datatable_id = None
-    if has_input:
-        data_file = param["input_data"]
+    needs_datatable = has_input or param.get("dummy_input") is not None
+    if needs_datatable:
+        data_file = param.get("input_data") or param.get("dummy_input")
         csv_path = data_dir / data_file
         df = pd.read_csv(csv_path)
         real_name = client.upload_data(node_id, csv_path)
@@ -487,8 +488,8 @@ def run_e2e_component(
         client.add_datatable_to_project(project_id, node_id, datatable_id)
 
     graph_id = client.create_graph(project_id, f"{comp_name}-graph")
-    nodes = _build_graph_nodes(graph_id, param, datatable_id, has_input)
-    edges = _build_graph_edges(graph_id, has_input)
+    nodes = _build_graph_nodes(graph_id, param, datatable_id)
+    edges = _build_graph_edges(graph_id, param)
     data_source_config = [{"nodeId": node_id, "dataSourceId": "default-data-source"}]
     client.update_graph(project_id, graph_id, nodes, edges, data_source_config)
 
@@ -497,7 +498,7 @@ def run_e2e_component(
     client.start_graph(project_id, graph_id, node_ids_to_start)
     client.poll_status(project_id, graph_id)
 
-    comp_out = out_dir / comp_name
+    comp_out = out_dir / comp_key
     comp_out.mkdir(parents=True, exist_ok=True)
     saved = {"component": comp, "attrs": param["attrs"]}
 
@@ -582,7 +583,7 @@ def main():
         print(f"\nE2E: {param_file.stem}")
         with open(param_file) as f:
             param = json.load(f)
-        saved = run_e2e_component(client, param, data_dir, out_dir, args.node)
+        saved = run_e2e_component(client, param, param_file.stem, data_dir, out_dir, args.node)
         results[param_file.stem] = saved
         print(f"  -> saved to {out_dir / param['component']['name']}")
         time.sleep(2)

@@ -1,0 +1,57 @@
+{
+  "name": "differential_privacy",
+  "tabs": [
+    {
+      "name": "result",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "query_type",
+                    "type": "str"
+                  },
+                  {
+                    "name": "query_col",
+                    "type": "str"
+                  },
+                  {
+                    "name": "result",
+                    "type": "str"
+                  },
+                  {
+                    "name": "remaining_epsilon",
+                    "type": "float"
+                  },
+                  {
+                    "name": "remaining_delta",
+                    "type": "float"
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "s": "noisy_count"
+                      },
+                      {},
+                      {
+                        "s": "1000.3269131067149"
+                      },
+                      {},
+                      {}
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

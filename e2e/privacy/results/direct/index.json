@@ -36,6 +36,110 @@
     },
     "report_0": "differential_privacy/report_0.json"
   },
+  "differential_privacy_noisy_count": {
+    "component": {
+      "domain": "privacy",
+      "name": "differential_privacy",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query_type": "noisy_count",
+      "query_col": "",
+      "epsilon_total": 1.0,
+      "delta": 0.0,
+      "epsilon_per_query": 1.0,
+      "delta_per_query": 0.0,
+      "mechanism": "laplace",
+      "column_sensitivities_json": "{}",
+      "bins_json": "[]",
+      "true_count": 1000.0,
+      "true_sum": 0.0,
+      "true_counts_json": "{}",
+      "sensitivity": 1.0,
+      "random_state": 42,
+      "min_count": 5.0,
+      "mode": "use_column_sensitivity"
+    },
+    "report_0": "differential_privacy_noisy_count/report_0.json"
+  },
+  "differential_privacy_noisy_histogram": {
+    "component": {
+      "domain": "privacy",
+      "name": "differential_privacy",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query_type": "noisy_histogram",
+      "query_col": "",
+      "epsilon_total": 1.0,
+      "delta": 0.0,
+      "epsilon_per_query": 1.0,
+      "delta_per_query": 0.0,
+      "mechanism": "laplace",
+      "column_sensitivities_json": "{}",
+      "bins_json": "[]",
+      "true_count": 0.0,
+      "true_sum": 0.0,
+      "true_counts_json": "{\"A\": 100, \"B\": 200, \"C\": 300}",
+      "sensitivity": 1.0,
+      "random_state": 42,
+      "min_count": 5.0,
+      "mode": "use_column_sensitivity"
+    },
+    "report_0": "differential_privacy_noisy_histogram/report_0.json"
+  },
+  "differential_privacy_noisy_mean": {
+    "component": {
+      "domain": "privacy",
+      "name": "differential_privacy",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query_type": "noisy_mean",
+      "query_col": "",
+      "epsilon_total": 1.0,
+      "delta": 0.0,
+      "epsilon_per_query": 1.0,
+      "delta_per_query": 0.0,
+      "mechanism": "laplace",
+      "column_sensitivities_json": "{}",
+      "bins_json": "[]",
+      "true_count": 1000.0,
+      "true_sum": 500000.0,
+      "true_counts_json": "{}",
+      "sensitivity": 100.0,
+      "random_state": 42,
+      "min_count": 5.0,
+      "mode": "use_column_sensitivity"
+    },
+    "report_0": "differential_privacy_noisy_mean/report_0.json"
+  },
+  "differential_privacy_noisy_sum": {
+    "component": {
+      "domain": "privacy",
+      "name": "differential_privacy",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "query_type": "noisy_sum",
+      "query_col": "",
+      "epsilon_total": 1.0,
+      "delta": 0.0,
+      "epsilon_per_query": 1.0,
+      "delta_per_query": 0.0,
+      "mechanism": "laplace",
+      "column_sensitivities_json": "{}",
+      "bins_json": "[]",
+      "true_count": 0.0,
+      "true_sum": 100000.0,
+      "true_counts_json": "{}",
+      "sensitivity": 1000.0,
+      "random_state": 42,
+      "min_count": 5.0,
+      "mode": "use_column_sensitivity"
+    },
+    "report_0": "differential_privacy_noisy_sum/report_0.json"
+  },
   "k_anonymity": {
     "component": {
       "domain": "privacy",
@@ -89,6 +193,25 @@
       "random_state": 42
     },
     "report_0": "query_obfuscation/report_0.json"
+  },
+  "query_obfuscation_batch": {
+    "component": {
+      "domain": "privacy",
+      "name": "query_obfuscation",
+      "version": "1.1.0"
+    },
+    "attrs": {
+      "op": "batch",
+      "query": "",
+      "queries_json": "[\"患者张三患有艾滋病，如何查询相关诊疗方案\", \"患者李四患有高血压，如何查询相关诊疗方案\"]",
+      "synonym_map_json": "{}",
+      "num_dummies": 3,
+      "random_state": 42,
+      "domain": "medical",
+      "medical_pool_json": "[]",
+      "generic_pool_json": "[]"
+    },
+    "report_0": "query_obfuscation_batch/report_0.json"
   },
   "sanitization": {
     "component": {

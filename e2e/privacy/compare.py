@@ -121,11 +121,12 @@ def _attr_to_str(v) -> str:
     return str(v)
 
 
-def compare_component(direct_dir: Path, e2e_dir: Path, comp_name: str) -> bool:
-    direct_summary = load_summary(direct_dir, comp_name)
-    e2e_summary = load_summary(e2e_dir, comp_name)
+def compare_component(direct_dir: Path, e2e_dir: Path, comp_key: str) -> bool:
+    direct_summary = load_summary(direct_dir, comp_key)
+    e2e_summary = load_summary(e2e_dir, comp_key)
     ok = True
 
+    comp_name = direct_summary.get("component", {}).get("name", comp_key)
     for key, direct_rel in direct_summary.items():
         if key in ("component", "attrs"):
             continue
@@ -164,9 +165,9 @@ def main():
         direct_index = json.load(f)
 
     ok = True
-    for comp_name in direct_index:
-        print(f"Comparing {comp_name} ...")
-        if not compare_component(direct_dir, e2e_dir, comp_name):
+    for comp_key in direct_index:
+        print(f"Comparing {comp_key} ...")
+        if not compare_component(direct_dir, e2e_dir, comp_key):
             ok = False
 
     if ok:

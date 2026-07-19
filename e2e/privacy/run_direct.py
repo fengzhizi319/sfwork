@@ -63,7 +63,7 @@ def load_param(param_path: str) -> dict:
         return json.load(f)
 
 
-def run_component(param: dict, data_dir: Path, out_dir: Path) -> dict:
+def run_component(param: dict, comp_key: str, data_dir: Path, out_dir: Path) -> dict:
     comp = param["component"]
     attrs = param.get("attrs", {})
     data_file = param.get("input_data")
@@ -128,7 +128,7 @@ def run_component(param: dict, data_dir: Path, out_dir: Path) -> dict:
         param=node_param, storage_config=storage_config, cluster_config=None
     )
 
-    comp_out = out_dir / comp["name"]
+    comp_out = out_dir / comp_key
     comp_out.mkdir(parents=True, exist_ok=True)
     saved = {"component": comp, "attrs": attrs}
 
@@ -191,7 +191,7 @@ def main():
     for param_file in sorted(param_dir.glob("*.json")):
         print(f"Running {param_file.stem} ...")
         param = load_param(str(param_file))
-        saved = run_component(param, data_dir, out_dir)
+        saved = run_component(param, param_file.stem, data_dir, out_dir)
         results[param_file.stem] = saved
         print(f"  -> saved to {out_dir / param['component']['name']}")
 

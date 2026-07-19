@@ -11,6 +11,7 @@ e2e/privacy/
 ├── run_direct.py             # 直接调用 SecretFlow comp_eval（本地模拟模式）
 ├── run_e2e.py                # 通过 SecretPad REST API 走完整链路
 ├── compare.py                # 对比 direct 与 e2e 输出
+├── TEST_DESIGN.md            # 端到端测试设计文档
 └── results/                  # 运行结果（自动创建）
     ├── direct/
     └── e2e/
@@ -29,10 +30,10 @@ e2e/privacy/
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate sf310
 cd /home/charles/code/sfwork
-python e2e/privacy/run_direct.py
+PYTHONPATH=./secretflow python e2e/privacy/run_direct.py
 ```
 
-结果写入 `e2e/privacy/results/direct/`。
+结果写入 `e2e/privacy/results/direct/`，每个参数文件对应独立子目录。
 
 ## 完整链路运行（E2E）
 
@@ -72,10 +73,10 @@ python e2e/privacy/compare.py
 | 组件 | 版本 | 说明 |
 |---|---|---|
 | data_classification | 1.1.0 | 数据分类分级（auto 模式） |
-| differential_privacy | 1.1.0 | 差分隐私统计（sum + 显式 clip） |
+| differential_privacy | 1.1.0 | 差分隐私统计（count / sum / mean / histogram） |
 | k_anonymity | 1.1.0 | K-匿名脱敏（Mondrian） |
 | sanitization | 1.1.0 | 数据脱敏（mask_id_card / mask_mobile / mask_name） |
-| query_obfuscation | 1.1.0 | 查询混淆（domain pool） |
+| query_obfuscation | 1.1.0 | 查询混淆（单条 + batch） |
 | local_differential_privacy | 1.0.0 | 本地差分隐私（binary RR 扰动） |
 
 ## 结果正确性说明

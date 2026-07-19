@@ -1,0 +1,113 @@
+{
+  "tabs": [
+    {
+      "name": "result",
+      "divs": [
+        {
+          "children": [
+            {
+              "type": "table",
+              "table": {
+                "headers": [
+                  {
+                    "name": "query_type",
+                    "type": "str",
+                    "desc": ""
+                  },
+                  {
+                    "name": "query_col",
+                    "type": "str",
+                    "desc": ""
+                  },
+                  {
+                    "name": "result",
+                    "type": "str",
+                    "desc": ""
+                  },
+                  {
+                    "name": "remaining_epsilon",
+                    "type": "float",
+                    "desc": ""
+                  },
+                  {
+                    "name": "remaining_delta",
+                    "type": "float",
+                    "desc": ""
+                  }
+                ],
+                "rows": [
+                  {
+                    "name": "0",
+                    "items": [
+                      {
+                        "s": "noisy_histogram",
+                        "f": 0.0,
+                        "i64": "0",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "s": "{\"A\": 100.32691310671485, \"B\": 197.00469784283936, \"C\": 299.40226960581305}",
+                        "f": 0.0,
+                        "i64": "0",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      },
+                      {
+                        "f": 0.0,
+                        "i64": "0",
+                        "s": "",
+                        "b": false,
+                        "fs": [],
+                        "i64s": [],
+                        "ss": [],
+                        "bs": [],
+                        "isNa": false
+                      }
+                    ],
+                    "desc": ""
+                  }
+                ],
+                "name": "",
+                "desc": ""
+              }
+            }
+          ],
+          "name": "",
+          "desc": ""
+        }
+      ],
+      "desc": ""
+    }
+  ]
+}
