@@ -82,6 +82,37 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
 
 # ------------------------------------------------------------------
+# 跨平台工具函数
+# ------------------------------------------------------------------
+# detect_os
+#   功能：检测当前操作系统类型。
+#   输出：linux / darwin / windows / unknown
+#   说明：Windows 指 Git Bash / MSYS2 / CYGWIN 等 Bash 环境。
+detect_os() {
+    local os
+    os="$(uname -s 2>/dev/null || echo unknown)"
+    case "$os" in
+        Linux*)     echo linux ;;
+        Darwin*)    echo darwin ;;
+        MINGW*|MSYS*|CYGWIN*) echo windows ;;
+        *)          echo unknown ;;
+    esac
+}
+
+# is_linux / is_macos / is_windows
+#   功能：判断当前操作系统是否为 Linux / macOS / Windows。
+#   返回：0=是，1=否
+is_linux() { [[ "$(detect_os)" == "linux" ]]; }
+is_macos() { [[ "$(detect_os)" == "darwin" ]]; }
+is_windows() { [[ "$(detect_os)" == "windows" ]]; }
+
+# command_exists
+#   功能：POSIX 标准方式检测命令是否存在于 PATH。
+#   参数：$1 - 待检测的命令名
+#   返回：0=存在，1=不存在
+command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+# ------------------------------------------------------------------
 # 命令行参数
 # ------------------------------------------------------------------
 USE_SSH=false
@@ -241,7 +272,7 @@ process_repo() {
     local branch="$3"
 
     if ! clone_or_update "$repo_url" "$target_dir" "$branch"; then
-        ((FAILED_COUNT += 1)) || true
+        FAILED_COUNT=$((FAILED_COUNT + 1))
     fi
 }
 

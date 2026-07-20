@@ -36,6 +36,10 @@
 #   bash scripts/dev-start.sh --check  # 仅检查环境
 #   bash scripts/dev-start.sh --help   # 显示帮助
 #
+# 运行平台:
+#   - Linux / macOS 原生 Bash
+#   - Windows 请在 Git Bash / MSYS2 / WSL2 的 Bash 环境中运行
+#
 # 停止服务:
 #   bash scripts/dev-stop.sh
 #   bash scripts/dev-stop.sh --kuscia  # 同时停止 Kuscia 容器
@@ -162,27 +166,97 @@ check_cloned_repositories() {
 #   功能:POSIX 标准方式检测命令是否存在于 PATH.
 #   参数:$1 - 待检测的命令名
 #   返回:0=存在,1=不存在
-#   原理:command -v 输出命令路径;>/dev/null 2>&1 丢弃输出,仅保留退出码.
-#   示例:command_exists java
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
-# is_macos
-#   功能:判断当前操作系统是否为 macOS(Darwin).
-#   返回:0=是 macOS,1=不是
-is_macos() { [[ "$(uname -s)" == "Darwin" ]]; }
+# detect_os
+#   功能:检测当前操作系统类型.
+#   输出:linux / darwin / windows / unknown
+#   说明:Windows 指 Git Bash / MSYS2 / CYGWIN 等 Bash 环境.
+detect_os() {
+    local os
+    os="$(uname -s 2>/dev/null || echo unknown)"
+    case "$os" in
+        Linux*)     echo linux ;;
+        Darwin*)    echo darwin ;;
+        MINGW*|MSYS*|CYGWIN*) echo windows ;;
+        *)          echo unknown ;;
+    esac
+}
+
+# is_linux / is_macos / is_windows
+#   功能:判断当前操作系统是否为 Linux / macOS / Windows.
+#   返回:0=是,1=否
+is_linux() { [[ "$(detect_os)" == "linux" ]]; }
+is_macos() { [[ "$(detect_os)" == "darwin" ]]; }
+is_windows() { [[ "$(detect_os)" == "windows" ]]; }
+
+# sed_i
+#   功能:跨平台原地编辑文件.
+#   参数:$1 - sed 脚本; 剩余参数 - 目标文件
+#   说明:macOS 需要 sed -i '',Linux 和 Windows MSYS 使用 sed -i.
+sed_i() {
+    local script="$1"
+    shift
+    if is_macos; then
+        sed -i '' "$script" "$@"
+    else
+        sed -i "$script" "$@"
+    fi
+}
 
 # version_ge
 #   功能:比较两个版本号,判断 $1 >= $2.
 #   参数:$1 - 待检测版本,$2 - 最低要求版本
 #   返回:0=$1 大于等于 $2,否则 1
 #   实现原理:
-#     将 $2 和 $1 按行输出(注意顺序:$2 在前),使用 sort -V 按语义化版本排序,
-#     再用 -C 检查是否已排序.若已排序,说明 $1 >= $2.
-#   示例:
-#     version_ge "17.0.11" "17"   -> 返回 0 (true)
-#     version_ge "16.14.0" "17"   -> 返回 1 (false)
+#     优先使用 printf + sort -V -C;在 MSYS 等 sort 不支持 -V 的环境下,
+#     回退到 awk 按点分版本号逐段比较.
 version_ge() {
-    printf '%s\n%s\n' "$2" "$1" | sort -V -C
+    local v1="$1" v2="$2"
+    if command_exists sort && printf '%s\n%s\n' "$v2" "$v1" | sort -V -C 2>/dev/null; then
+        return 0
+    fi
+    awk -v v1="$v1" -v v2="$v2" 'BEGIN {
+        split(v1, a, ".");
+        split(v2, b, ".");
+        for (i = 1; i <= 4; i++) {
+            if ((a[i] "" == "") && (b[i] "" == "")) exit 0;
+            av = (a[i] "" == "") ? 0 : a[i] + 0;
+            bv = (b[i] "" == "") ? 0 : b[i] + 0;
+            if (av > bv) exit 0;
+            if (av < bv) exit 1;
+        }
+        exit 0;
+    }'
+}
+
+# to_docker_path
+#   功能:将宿主机路径转换为 Docker Desktop 可识别的 POSIX 风格路径.
+#   参数:$1 - 待转换路径
+#   输出:转换后的路径
+#   说明:Windows MSYS 路径 /c/Users/... 通常可被 Docker Desktop 识别,
+#        此函数用于在必要时统一为正斜杠并去除尾部空格.
+to_docker_path() {
+    local path="$1"
+    # 将反斜杠替换为正斜杠,去除首尾空格
+    printf '%s' "$path" | tr '\\' '/' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+# to_posix_path
+#   功能:将 Windows 原生路径转换为 POSIX 路径.
+#   参数:$1 - 待转换路径
+#   输出:转换后的 POSIX 路径
+#   说明:Git Bash / MSYS2 使用 cygpath -u;WSL2 使用 wslpath -u;
+#        两者均不可用时回退到简单的反斜杠替换.
+to_posix_path() {
+    local path="$1"
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -u "$path" 2>/dev/null || to_docker_path "$path"
+    elif command -v wslpath >/dev/null 2>&1; then
+        wslpath -u "$path" 2>/dev/null || to_docker_path "$path"
+    else
+        to_docker_path "$path"
+    fi
 }
 
 # 获取各运行时版本号
@@ -363,8 +437,17 @@ check_environment() {
 port_in_use() {
     local port="$1"
     if is_macos; then
-        # macOS 没有 ss,使用 lsof 检测监听端口
+        # macOS 使用 lsof 检测监听端口
         command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+    elif is_windows; then
+        # Windows Git Bash / MSYS2:优先使用 lsof,否则解析 netstat
+        if command -v lsof >/dev/null 2>&1; then
+            lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -an 2>/dev/null | grep -qE "TCP[[:space:]]+[0-9.]+:${port}[[:space:]]+.*LISTENING"
+        else
+            return 1
+        fi
     else
         # Linux 优先使用 ss
         if command -v ss >/dev/null 2>&1; then
@@ -384,11 +467,21 @@ port_in_use() {
 #   跨平台说明:
 #     - Linux: 优先使用 ss -tlnp,降级到 netstat
 #     - macOS: 使用 lsof -ti
+#     - Windows:优先使用 lsof -ti,否则解析 netstat -ano
 port_pid() {
     local port="$1"
     if is_macos; then
         # macOS 使用 lsof -ti 直接获取监听端口的 pid
         command -v lsof >/dev/null 2>&1 && lsof -tiTCP:"$port" -sTCP:LISTEN | head -1
+    elif is_windows; then
+        # Windows Git Bash / MSYS2:优先使用 lsof
+        if command -v lsof >/dev/null 2>&1; then
+            lsof -tiTCP:"$port" -sTCP:LISTEN | head -1
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -ano 2>/dev/null | grep -E "TCP[[:space:]]+[0-9.]+:${port}[[:space:]]+.*LISTENING" | awk '{print $NF}' | head -1
+        else
+            echo ""
+        fi
     else
         # Linux 优先使用 ss
         if command -v ss >/dev/null 2>&1; then
@@ -520,10 +613,23 @@ check_required_ports() {
 #   功能:检测进程是否存活.
 #   参数:$1 - 进程 ID
 #   返回:0=存活,1=不存在或无权限
-#   说明:使用 ps -p 而非 kill -0,避免对没有权限的进程误判断.
+#   说明:Linux/macOS 使用 ps -p;Windows 在 ps -p 失败后回退到 tasklist 或 pgrep.
 is_process_alive() {
     local pid="$1"
-    [ -n "$pid" ] && ps -p "$pid" >/dev/null 2>&1
+    [ -n "$pid" ] || return 1
+    if ps -p "$pid" >/dev/null 2>&1; then
+        return 0
+    fi
+    if is_windows; then
+        if command -v tasklist >/dev/null 2>&1; then
+            tasklist /FI "PID eq $pid" 2>/dev/null | grep -qE "[[:space:]]${pid}[[:space:]]"
+            return $?
+        elif command -v pgrep >/dev/null 2>&1; then
+            pgrep -q -F - <<<"$pid" 2>/dev/null
+            return $?
+        fi
+    fi
+    return 1
 }
 
 # stop_service_by_pidfile
@@ -536,6 +642,7 @@ is_process_alive() {
 #     2. 等待 1 秒
 #     3. 若仍在运行,发送 SIGKILL(kill -9)强制终止
 #     4. 删除 PID 文件,避免旧 PID 被后续误判.
+#   说明:Windows 下 kill 若失败,回退到 taskkill.
 stop_service_by_pidfile() {
     local pidfile="$1" name="$2"
     if [ -f "$pidfile" ]; then
@@ -544,11 +651,19 @@ stop_service_by_pidfile() {
         if is_process_alive "$pid"; then
             log_info "停止已运行的 $name(pid $pid)..."
             # kill 默认发送 SIGTERM(信号 15),允许进程优雅退出
-            kill "$pid" 2>/dev/null || true
+            if ! kill "$pid" 2>/dev/null; then
+                if is_windows && command -v taskkill >/dev/null 2>&1; then
+                    taskkill /PID "$pid" /F 2>/dev/null || true
+                fi
+            fi
             sleep 1
             if is_process_alive "$pid"; then
                 # SIGKILL(信号 9)强制终止,进程无法忽略
-                kill -9 "$pid" 2>/dev/null || true
+                if ! kill -9 "$pid" 2>/dev/null; then
+                    if is_windows && command -v taskkill >/dev/null 2>&1; then
+                        taskkill /PID "$pid" /F 2>/dev/null || true
+                    fi
+                fi
             fi
         fi
         # 删除 PID 文件,防止后续将旧 PID 误判为当前服务
@@ -661,6 +776,7 @@ build_backend() {
 # reset_kuscia
 #   功能:删除已有的 Kuscia 容器及数据目录,强制下一次重新部署.
 #   适用场景:自定义 SecretFlow 镜像更新后,Kuscia 中注册的 AppImage 仍指向旧镜像.
+#   说明:Windows 没有 sudo,优先使用 Docker 容器清理,仅在命令存在时回退到 sudo.
 reset_kuscia() {
     log_step "重置 Kuscia 环境 ..."
     # 数组:需要删除的容器名.${USER} 展开为当前用户名,与 install-kuscia-only.sh 命名保持一致.
@@ -685,12 +801,19 @@ reset_kuscia() {
         log_warn "删除 Kuscia 数据目录:$kuscia_install_dir"
         # Kuscia 容器以 root 运行,部分数据文件(etcd、pod 日志)为 root 所有,
         # 直接 rm -rf 会权限不足.借助一个 root 权限的临时容器来清理.
-        if docker run --rm -v "$kuscia_install_dir:/kuscia_tmp" busybox \
+        local docker_kuscia_install_dir
+        docker_kuscia_install_dir="$(to_docker_path "$kuscia_install_dir")"
+        if docker run --rm -v "$docker_kuscia_install_dir:/kuscia_tmp" busybox \
             sh -c 'find /kuscia_tmp -mindepth 1 -delete' >/dev/null 2>&1; then
             log_info "Kuscia 数据目录已清空"
         else
             log_warn "通过 Docker 容器清理失败,尝试 sudo rm -rf ..."
-            sudo rm -rf "$kuscia_install_dir" >/dev/null 2>&1 || true
+            if command -v sudo >/dev/null 2>&1; then
+                sudo rm -rf "$kuscia_install_dir" >/dev/null 2>&1 || true
+            else
+                log_warn "未找到 sudo,跳过 sudo 清理;Windows 下可直接使用 rm -rf"
+                rm -rf "$kuscia_install_dir" >/dev/null 2>&1 || true
+            fi
         fi
     fi
     log_info "Kuscia 环境已重置,下次启动将重新部署"
@@ -831,7 +954,9 @@ start_backend() {
 
     # Kuscia Docker 模式将节点数据目录挂载到宿主机 $HOME/kuscia/master/data/{nodeId}
     # SecretPad 后端下载结果文件时需要使用该路径,而非默认 /app/data
-    local kuscia_data_dir="${INSTALL_DIR:-$HOME/kuscia}/master/data"
+    local install_dir_posix
+    install_dir_posix="$(to_posix_path "${INSTALL_DIR:-$HOME/kuscia}")"
+    local kuscia_data_dir="$install_dir_posix/master/data"
 
     # nohup: 忽略 SIGHUP,终端关闭后进程继续运行
     # 标准输出和错误输出重定向到日志文件
@@ -844,7 +969,8 @@ start_backend() {
 
     # $! 保存最近一个后台进程的 PID;将其写入 PID 文件以便后续停止或检查
     echo $! > "$pidfile"
-    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收
+    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收.
+    # Windows Git Bash 可能不支持 disown,因此忽略失败.
     disown $! 2>/dev/null || true
     log_info "后端进程已启动,pid $!"
     wait_for_port 127.0.0.1 8080 120 "后端 HTTP"
@@ -872,10 +998,10 @@ start_frontend() {
 
     # 如果文件不存在或没有 PROXY_URL 配置,则创建/更新
     if [ ! -f "$env_file" ]; then
-        echo "PROXY_URL=http://127.0.0.1:8080" > "$env_file"
+        printf 'PROXY_URL=http://127.0.0.1:8080\n' > "$env_file"
         log_info "已创建前端代理配置文件:$env_file"
     elif ! grep -q '^PROXY_URL=' "$env_file" 2>/dev/null; then
-        echo "PROXY_URL=http://127.0.0.1:8080" >> "$env_file"
+        printf 'PROXY_URL=http://127.0.0.1:8080\n' >> "$env_file"
         log_info "已添加前端代理配置到:$env_file"
     else
         # 文件存在且已有 PROXY_URL,检查是否正确
@@ -883,7 +1009,7 @@ start_frontend() {
         current_proxy=$(grep '^PROXY_URL=' "$env_file" | head -1 | cut -d'=' -f2-)
         if [ "$current_proxy" != "http://127.0.0.1:8080" ]; then
             log_warn "检测到前端代理配置为 $current_proxy,将更新为 http://127.0.0.1:8080"
-            sed -i 's|^PROXY_URL=.*|PROXY_URL=http://127.0.0.1:8080|' "$env_file"
+            sed_i 's|^PROXY_URL=.*|PROXY_URL=http://127.0.0.1:8080|' "$env_file"
         fi
     fi
 
@@ -897,7 +1023,8 @@ start_frontend() {
     # --filter secretpad: 在 monorepo 中仅启动 secretpad 应用
     nohup corepack pnpm --filter secretpad dev > "$LOG_DIR/frontend.log" 2>&1 &
     echo $! > "$pidfile"
-    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收
+    # disown 将作业从 shell 作业表中移除,避免脚本退出时进程被回收.
+    # Windows Git Bash 可能不支持 disown,因此忽略失败.
     disown $! 2>/dev/null || true
     log_info "前端进程已启动,pid $!"
     wait_for_port 127.0.0.1 8000 120 "前端开发服务器"
@@ -961,6 +1088,10 @@ sfwork 二次开发环境一键启动脚本(使用自定义 SecretFlow 镜像)
   bash scripts/dev-start.sh --check  仅检查环境
   bash scripts/dev-start.sh --reset-kuscia  重置 Kuscia 后完整启动
   bash scripts/dev-start.sh --help          显示本帮助
+
+运行平台:
+  - Linux / macOS 原生 Bash
+  - Windows 请在 Git Bash / MSYS2 / WSL2 的 Bash 环境中运行
 
 环境变量:
   PRIVACY_IMAGE        自定义 SecretFlow 镜像 tag(默认:secretflow/sf-privacy-dev:1.15.0.dev-privacy)

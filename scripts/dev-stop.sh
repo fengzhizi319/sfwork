@@ -12,6 +12,10 @@
 #   bash scripts/dev-stop.sh           # 停止后端和前端
 #   bash scripts/dev-stop.sh --kuscia  # 同时停止 Kuscia 容器
 #
+# 运行平台：
+#   - Linux / macOS 原生 Bash
+#   - Windows 请在 Git Bash / MSYS2 / WSL2 的 Bash 环境中运行
+#
 # 设计说明：
 #   - 后端和前端的进程 ID 分别保存在 logs/backend.pid 和 logs/frontend.pid
 #   - 通过 PID 文件精确停止本脚本启动的进程，避免误杀其他服务
@@ -50,14 +54,49 @@ BOB_NAME="${BOB_NAME:-bob}"
 # LOG_DIR: 与 dev-start.sh 保持一致，PID 文件存放目录
 LOG_DIR="$SFWORK_ROOT/logs"
 
+# ------------------------------------------------------------------
+# 跨平台工具函数
+# ------------------------------------------------------------------
+# detect_os
+#   功能：检测当前操作系统类型。
+#   输出：linux / darwin / windows / unknown
+#   说明：Windows 指 Git Bash / MSYS2 / CYGWIN 等 Bash 环境。
+detect_os() {
+    local os
+    os="$(uname -s 2>/dev/null || echo unknown)"
+    case "$os" in
+        Linux*)     echo linux ;;
+        Darwin*)    echo darwin ;;
+        MINGW*|MSYS*|CYGWIN*) echo windows ;;
+        *)          echo unknown ;;
+    esac
+}
+
+is_linux() { [[ "$(detect_os)" == "linux" ]]; }
+is_macos() { [[ "$(detect_os)" == "darwin" ]]; }
+is_windows() { [[ "$(detect_os)" == "windows" ]]; }
+
 # is_alive
 #   功能：检测进程是否存活。
 #   参数：$1 - 进程 ID
 #   返回：0=存活，1=不存在或无权限
-#   说明：使用 kill -0 不发送信号，仅检查进程是否存在。
+#   说明：Linux/macOS 使用 ps -p；Windows 在 ps -p 失败后回退到 tasklist 或 pgrep。
 is_alive() {
     local pid="$1"
-    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+    [ -n "$pid" ] || return 1
+    if ps -p "$pid" >/dev/null 2>&1; then
+        return 0
+    fi
+    if is_windows; then
+        if command -v tasklist >/dev/null 2>&1; then
+            tasklist /FI "PID eq $pid" 2>/dev/null | grep -qE "[[:space:]]${pid}[[:space:]]"
+            return $?
+        elif command -v pgrep >/dev/null 2>&1; then
+            pgrep -q -F - <<<"$pid" 2>/dev/null
+            return $?
+        fi
+    fi
+    return 1
 }
 
 # stop_pidfile
@@ -70,6 +109,7 @@ is_alive() {
 #     2. 等待 1 秒
 #     3. 若仍在运行，发送 SIGKILL 强制终止
 #     4. 删除 PID 文件（无论进程是否原本在运行）
+#   说明：Windows 下 kill 若失败，回退到 taskkill。
 stop_pidfile() {
     local pidfile="$1"
     local name="$2"
@@ -79,11 +119,19 @@ stop_pidfile() {
         if is_alive "$pid"; then
             echo "停止 ${name}（pid ${pid}）..."
             # kill 默认发送 SIGTERM（信号 15）
-            kill "$pid" 2>/dev/null || true
+            if ! kill "$pid" 2>/dev/null; then
+                if is_windows && command -v taskkill >/dev/null 2>&1; then
+                    taskkill /PID "$pid" /F 2>/dev/null || true
+                fi
+            fi
             sleep 1
             if is_alive "$pid"; then
                 # SIGKILL（信号 9）强制终止
-                kill -9 "$pid" 2>/dev/null || true
+                if ! kill -9 "$pid" 2>/dev/null; then
+                    if is_windows && command -v taskkill >/dev/null 2>&1; then
+                        taskkill /PID "$pid" /F 2>/dev/null || true
+                    fi
+                fi
             fi
         else
             echo "${name} 未在运行"
