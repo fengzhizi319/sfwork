@@ -172,7 +172,7 @@ bash scripts/build-privacy-image.sh
 ### 6.3 默认密钥处理
 
 - `scripts/run-all-no-docker.sh`：
-  - 移除硬编码 `SUDO_PWD=110734`
+  - 移除硬编码 `SUDO_PWD=111111`
   - 支持从 `.env` 读取
   - 未设置 SUDO_PWD 且无免密 sudo 时直接报错退出
 - `.env.example`：新增 `SUDO_PWD` 配置项与警告

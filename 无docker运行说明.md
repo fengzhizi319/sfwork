@@ -101,11 +101,11 @@ chmod +x /home/charles/code/sfwork/scripts/run-all-no-docker.sh
 
 ### 2.2 启动所有服务
 
-如果你的 sudo 密码不是默认的 `110734`，请通过环境变量传入：
+如果你的 sudo 密码不是默认的 `111111`，请通过环境变量传入：
 
 ```bash
-# 默认 sudo 密码为 110734；建议自定义
-export SUDO_PWD="110734"
+# 默认 sudo 密码为 111111；建议自定义
+export SUDO_PWD="111111"
 export CONDA_ENV="sf310"
 
 bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh
@@ -114,13 +114,13 @@ bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh
 或合并为一行：
 
 ```bash
-SUDO_PWD="110734" CONDA_ENV="sf310" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh
+SUDO_PWD="111111" CONDA_ENV="sf310" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh
 ```
 
 ### 2.3 停止所有服务
 
 ```bash
-SUDO_PWD="110734" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop
+SUDO_PWD="111111" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop
 ```
 
 ## 3. 手动启动步骤
@@ -174,7 +174,7 @@ sudo bash /home/charles/code/sfwork/kuscia/scripts/run_local_kuscia.sh master
 或使用脚本内部的 sudo 自动输入（已知密码时）：
 
 ```bash
-echo "110734" | sudo -S bash /home/charles/code/sfwork/kuscia/scripts/run_local_kuscia.sh master
+echo "111111" | sudo -S bash /home/charles/code/sfwork/kuscia/scripts/run_local_kuscia.sh master
 ```
 
 启动后会占用以下默认端口：
@@ -247,7 +247,7 @@ pnpm --filter secretpad dev
 ### 4.1 使用一键脚本停止
 
 ```bash
-SUDO_PWD="110734" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop
+SUDO_PWD="111111" bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop
 ```
 
 ### 4.2 手动停止服务
@@ -327,7 +327,7 @@ sudo systemctl restart systemd-resolved
 sudo whoami
 
 # 如不希望交互，可通过环境变量传入密码（已知密码时）
-export SUDO_PWD="110734"
+export SUDO_PWD="111111"
 echo "$SUDO_PWD" | sudo -S whoami
 ```
 

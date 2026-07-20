@@ -71,13 +71,13 @@ bash scripts/dev-stop.sh --kuscia  # 同时停止 Kuscia 容器
 所有组件均从本地源码启动，不依赖 Docker：
 
 ```bash
-SUDO_PWD="110734" bash scripts/run-all-no-docker.sh
+SUDO_PWD="111111" bash scripts/run-all-no-docker.sh
 ```
 
 停止：
 
 ```bash
-SUDO_PWD="110734" bash scripts/run-all-no-docker.sh --stop
+SUDO_PWD="111111" bash scripts/run-all-no-docker.sh --stop
 ```
 
 ---
@@ -88,7 +88,7 @@ SUDO_PWD="110734" bash scripts/run-all-no-docker.sh --stop
 |------|--------|------|
 | `PRIVACY_IMAGE` | `secretflow/sf-privacy-dev:1.15.0.dev-privacy` | 自定义 SecretFlow 镜像 tag |
 | `CONDA_ENV` | `sf310` | 构建 SecretFlow wheel 使用的 conda 环境 |
-| `SUDO_PWD` | `110734` | 无 Docker 模式下 sudo 密码 |
+| `SUDO_PWD` | `111111` | 无 Docker 模式下 sudo 密码 |
 
 ---
 
