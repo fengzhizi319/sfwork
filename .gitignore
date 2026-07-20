@@ -46,3 +46,4 @@ __pycache__/
 
 # 本地环境变量配置（由 .env.example 复制生成）
 .env
+.backup/
