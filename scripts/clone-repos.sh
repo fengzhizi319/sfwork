@@ -76,10 +76,13 @@ NC='\033[0m'          # No Color，重置为终端默认样式
 # 日志函数：统一输出格式，减少重复拼接。
 # $* 表示函数接收的所有参数，作为一个整体字符串。
 # log_error 将输出重定向到标准错误（>&2），便于外部脚本或 CI 捕获错误。
-log_info() { echo -e "${GREEN}[INFO]${NC} $*"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
-log_step() { echo -e "${BLUE}[STEP]${NC} $*"; }
+# 使用 printf 替代 echo -e，在 Git Bash / MSYS2 / CYGWIN 等环境下
+# echo -e 的行为不一致（部分环境不解析转义序列，部分直接输出 -e）。
+# printf 是 POSIX 标准工具，跨平台表现一致。
+log_info() { printf "${GREEN}[INFO]${NC} %s\n" "$*"; }
+log_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
+log_error() { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; }
+log_step() { printf "${BLUE}[STEP]${NC} %s\n" "$*"; }
 
 # ------------------------------------------------------------------
 # 跨平台工具函数
@@ -118,7 +121,13 @@ command_exists() { command -v "$1" >/dev/null 2>&1; }
 USE_SSH=false
 
 print_help() {
-    sed -n '2,40p' "$0" | sed 's/^# //; s/^#//'
+    # 使用 head/tail 替代 sed 行号范围，避免 Git Bash (MSYS2) 下
+    # CRLF 换行符导致 sed 匹配异常。
+    if command_exists head && command_exists tail; then
+        tail -n +2 "$0" | head -n 40 | sed 's/^# //; s/^#//'
+    else
+        sed -n '2,40p' "$0" | sed 's/^# //; s/^#//'
+    fi
 }
 
 # ${1:-} 是参数默认值展开：如果 $1 未定义，则返回空字符串。
@@ -277,7 +286,16 @@ process_repo() {
 }
 
 process_repo "$SECRETPAD_REPO"           "$SFWORK_ROOT/secretpad"                  "$SECRETPAD_BRANCH"
-process_repo "$SECRETPAD_FRONTEND_REPO"  "$SFWORK_ROOT/secretpad/frontend-src"     "$SECRETPAD_FRONTEND_BRANCH"
+
+# secretpad-frontend 克隆到 secretpad/frontend-src/，依赖 secretpad 是一个有效的 git 仓库。
+# 若 secretpad 克隆失败或存在但不是 git 仓库，提前跳过，避免目录结构错乱。
+if [ ! -d "$SFWORK_ROOT/secretpad/.git" ]; then
+    log_error "secretpad 不是有效的 git 仓库，跳过 secretpad-frontend 克隆（请先确保 secretpad 克隆成功）"
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+else
+    process_repo "$SECRETPAD_FRONTEND_REPO"  "$SFWORK_ROOT/secretpad/frontend-src"     "$SECRETPAD_FRONTEND_BRANCH"
+fi
+
 process_repo "$KUSCIA_REPO"              "$SFWORK_ROOT/kuscia"                     "$KUSCIA_BRANCH"
 process_repo "$SECRETFLOW_REPO"          "$SFWORK_ROOT/secretflow"          "$SECRETFLOW_BRANCH"
 process_repo "$PRIVACY_JAVA_REPO"        "$SFWORK_ROOT/privacy-java-sdk"    "$PRIVACY_JAVA_BRANCH"
