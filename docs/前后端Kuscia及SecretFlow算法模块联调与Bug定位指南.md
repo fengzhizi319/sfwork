@@ -25,6 +25,7 @@
   - [案例：差分隐私流水线运行失败（MessageToJson 参数不兼容）](#案例差分隐私流水线运行失败messagetojson-参数不兼容)
   - [案例：K-匿名本地测试 "no tests ran"（pytest --env 过滤）](#案例k-匿名本地测试-no-tests-ranpytest-env-过滤)
   - [案例：前端 K-匿名流水线运行失败（QI 列与数据不匹配）](#案例前端-k-匿名流水线运行失败qi-列与数据不匹配)
+  - [案例：DAG 页面因 projectId 为空报入参校验失败](#案例dag-页面因-projectid-为空报入参校验失败)
 - [5. 常用命令速查表](#5-常用命令速查表)
 - [6. 调试建议与最佳实践](#6-调试建议与最佳实践)
 - [7. 扩展：新增一个算法组件的端到端 checklist](#7-扩展新增一个算法组件的端到端-checklist)
@@ -1045,6 +1046,84 @@ http://localhost:8000/dag?projectId=dcucgakp&mode=MPC&dagId=klflmlhv
   # 从后端日志中提取 SecretFlow 错误
   grep "klflmlhv" $SFWORK/logs/backend.log | grep "ERROR entry.py"
   ```
+
+---
+
+### 案例：DAG 页面因 projectId 为空报入参校验失败
+
+**现象**：直接访问 `http://localhost:8000/dag`（URL 不带 `?projectId=`）时，页面反复弹出错误提示：
+
+```text
+入参校验失败: 不能为空
+```
+
+训练流列表为空，画布无法使用。
+
+**定位步骤**：
+
+1. 该错误是后端参数校验错误（HTTP 状态码为 200，但响应体 `status.code != 0`），查看后端日志确认：
+
+   ```bash
+   grep -i "MethodArgumentNotValid\|不能为空" $SFWORK/logs/backend.log | tail
+   ```
+
+   可看到 `Field error ... on field 'projectId': rejected value [null]`，对应接口为
+   `GraphController.listGraph`（`graph/list`）与 `CloudLogController.getCloudLog`（`cloud_log/sls`）。
+
+2. 在浏览器开发者工具 Network 面板中确认：`graph/list` 与 `cloud_log/sls` 的请求体为空对象 `{}`（未携带 projectId）。
+
+3. **结论**：前端 DAG 页面从 URL query 读取 `projectId`，直接访问 `/dag` 时未携带该参数，
+   `projectId` 为 `undefined`，但前端仍发起了请求，触发后端 `@NotBlank` 校验。
+
+**根因**：
+
+旧版前端（`secretpad/frontend-src`，即 8000 端口实际运行的 umi 应用）中有两处在调用后端前
+未对从 URL 读取的 `projectId` 做空值检查：
+
+1. `DefaultPipelineService.getPipelines()` 加载训练流列表时调用 `graph/list`；
+2. `SlsService.getSlsLogIsConfig()` 在构造函数中探测日志配置时调用 `cloud_log/sls`。
+
+**修复方案**：
+
+两处在调用后端前增加 `projectId` 空值检查，为空时直接返回空结果 / 跳过请求，页面展示“暂无训练流”空状态：
+
+```typescript
+// pipeline-service.ts -> getPipelines()
+const { projectId } = parse(search);
+if (!projectId) {
+  this.pipelines = [];
+  return [];
+}
+
+// sls-service.ts -> getSlsLogIsConfig()
+const { projectId } = parse(search);
+if (!projectId) {
+  this.slsLogIsConfig = false;
+  return;
+}
+```
+
+**涉及文件**：
+
+| 文件 | 操作 |
+|------|------|
+| `frontend-src/apps/platform/src/modules/pipeline/pipeline-service.ts` | 增加 projectId 空值检查 |
+| `frontend-src/apps/platform/src/modules/dag-log/sls-service.ts` | 增加 projectId 空值检查 |
+
+**验证**：
+
+1. 前端热更新后直接访问 `http://localhost:8000/dag`，页面展示“暂无训练流”空状态，不再弹出“入参校验失败”。
+2. 确认后端日志不再新增校验异常：
+
+   ```bash
+   grep -c "MethodArgumentNotValid" $SFWORK/logs/backend.log
+   ```
+
+**经验总结**：
+
+- 从 URL query 读取的参数（如 `projectId`）在调用后端前**必须做空值检查**，否则直接访问页面会发出非法请求，触发后端 `@NotBlank` 校验。
+- SecretPad 后端校验失败时返回 HTTP 200 但 `status.code != 0`，排查时不能只看 HTTP 状态码，需结合响应体与后端日志。
+- 8000 端口实际运行的前端是旧版 `secretpad/frontend-src`（umi），排查 DAG 页面问题时先确认生效的是哪个前端。
 
 ---
 
