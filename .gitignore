@@ -16,6 +16,9 @@
 /privacy-go-sdk/
 /privacy-local-agent/
 
+# 已移除的子项目
+/secretflowpad-go/
+
 # Kuscia 本地运行时数据
 /.local-kuscia/
 

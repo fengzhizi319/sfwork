@@ -14,7 +14,6 @@ sfwork/
 ├── kuscia/                 # Go orchestration engine
 ├── secretflow/             # Python privacy-preserving ML framework
 ├── secretpad/              # Java backend + web/ frontend (active)
-├── secretflowpad-go/       # Go backend (experimental / separate, not started by dev-start.sh)
 ├── privacy-java-sdk/       # Java local privacy SDK
 ├── privacy-go-sdk/         # Go local privacy SDK
 ├── privacy-local-agent/    # Python REST/gRPC privacy agent
@@ -74,7 +73,7 @@ cd secretpad/web && corepack pnpm --filter @secretpad/app dev
 ## Port Conflict Notes
 
 - `scripts1/dev-start.sh` starts the Java SecretPad backend on port 8080 and the Vite dev server on port 8000.
-- If `secretflowpad-go/bin/secretpad-go` or another process is already listening on 8080, the script will fail with "端口 8080 被其他进程占用". Kill the conflicting process before starting.
+- If another process is already listening on 8080, the script will fail with "端口 8080 被其他进程占用". Kill the conflicting process before starting.
 - Use `lsof -i :8080` and `lsof -i :8000` to identify conflicting processes.
 
 ## Cross-Project Contracts
