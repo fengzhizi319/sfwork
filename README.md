@@ -3,6 +3,8 @@
 sfwork 是 SecretFlow 隐私计算生态的本地开发工作区，聚合了 Kuscia、SecretFlow、SecretPad（含前端）三个核心仓库，并提供统一的文档与编排脚本。
 
 > **注意**：本仓库本身不包含子项目源码。子项目通过 `scripts/clone-repos.sh` 独立克隆和管理。
+>
+> **Windows 用户提示**：`scripts/` 下的启动脚本都是 Bash 脚本，Windows 上请在 **WSL2（推荐 Ubuntu）** 或其他类 Unix Shell 环境中执行，不要直接用 `cmd.exe` / PowerShell 调用。
 
 ---
 
@@ -123,6 +125,8 @@ SecretFlow (Python)  ← 在容器内执行隐私保护算法
 ## 快速开始
 
 ### 1. 克隆子项目
+
+> 如果你在 Windows 上开发，请先进入 WSL2 终端，再执行下面的 `bash scripts/*.sh` 命令。
 
 ```bash
 cd /home/charles/code/sfwork

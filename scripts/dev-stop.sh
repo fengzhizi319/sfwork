@@ -12,14 +12,9 @@
 #   bash scripts/dev-stop.sh           # 停止后端和前端
 #   bash scripts/dev-stop.sh --kuscia  # 同时停止 Kuscia 容器
 #
-# 运行平台：
-#   - Linux / macOS 原生 Bash
-#   - Windows 请在 Git Bash / MSYS2 / WSL2 的 Bash 环境中运行
-#
 # 设计说明：
 #   - 后端和前端的进程 ID 分别保存在 logs/backend.pid 和 logs/frontend.pid
 #   - 通过 PID 文件精确停止本脚本启动的进程，避免误杀其他服务
-#   - 前端进程（pnpm -> node -> Vite）会拉起子进程，因此停止时递归终止所有后代进程
 #   - Kuscia 容器名遵循 ${USER}-kuscia-{master,lite-alice,lite-bob} 命名规则
 # ============================================================================
 
@@ -55,134 +50,40 @@ BOB_NAME="${BOB_NAME:-bob}"
 # LOG_DIR: 与 dev-start.sh 保持一致，PID 文件存放目录
 LOG_DIR="$SFWORK_ROOT/logs"
 
-# ------------------------------------------------------------------
-# 跨平台工具函数
-# ------------------------------------------------------------------
-# detect_os
-#   功能：检测当前操作系统类型。
-#   输出：linux / darwin / windows / unknown
-#   说明：Windows 指 Git Bash / MSYS2 / CYGWIN 等 Bash 环境。
-detect_os() {
-    local os
-    os="$(uname -s 2>/dev/null || echo unknown)"
-    case "$os" in
-        Linux*)     echo linux ;;
-        Darwin*)    echo darwin ;;
-        MINGW*|MSYS*|CYGWIN*) echo windows ;;
-        *)          echo unknown ;;
-    esac
-}
-
-is_linux() { [[ "$(detect_os)" == "linux" ]]; }
-is_macos() { [[ "$(detect_os)" == "darwin" ]]; }
-is_windows() { [[ "$(detect_os)" == "windows" ]]; }
-
 # is_alive
 #   功能：检测进程是否存活。
 #   参数：$1 - 进程 ID
 #   返回：0=存活，1=不存在或无权限
-#   说明：Linux/macOS 使用 ps -p；Windows 在 ps -p 失败后回退到 tasklist 或 pgrep。
+#   说明：使用 kill -0 不发送信号，仅检查进程是否存在。
 is_alive() {
     local pid="$1"
-    [ -n "$pid" ] || return 1
-    if ps -p "$pid" >/dev/null 2>&1; then
-        return 0
-    fi
-    if is_windows; then
-        if command -v tasklist >/dev/null 2>&1; then
-            tasklist /FI "PID eq $pid" 2>/dev/null | grep -qE "[[:space:]]${pid}[[:space:]]"
-            return $?
-        elif command -v pgrep >/dev/null 2>&1; then
-            pgrep -q -F - <<<"$pid" 2>/dev/null
-            return $?
-        fi
-    fi
-    return 1
-}
-
-# collect_descendant_pids
-#   功能：递归收集指定 PID 的所有后代进程 ID（子进程、孙进程等）。
-#   参数：$1 - 父进程 ID
-#   输出：每行一个后代 PID，顺序为递归深度优先
-#   实现：优先使用 pgrep -P（Linux/macOS 均支持），降级到 ps -o pid= --ppid
-#   说明：pnpm 启动的 Vite 开发服务器会 fork 出 node 子进程；只杀父进程会导致
-#        子进程被 init 接管而成为孤儿进程，继续占用 8000 端口。
-collect_descendant_pids() {
-    local parent="$1"
-    local children
-    children="$(pgrep -P "$parent" 2>/dev/null || ps -o pid= --ppid "$parent" 2>/dev/null || true)"
-    for child in $children; do
-        echo "$child"
-        collect_descendant_pids "$child"
-    done
-}
-
-# kill_pids
-#   功能：向一组 PID 发送指定信号，忽略不存在或无权访问的进程。
-#   参数：$1 - 信号；剩余参数 - PID 列表
-kill_pids() {
-    local sig="$1"
-    shift
-    local pid
-    for pid in "$@"; do
-        [ -n "$pid" ] || continue
-        kill "$sig" "$pid" 2>/dev/null || true
-    done
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
 }
 
 # stop_pidfile
-#   功能：根据 PID 文件停止指定服务，并递归清理其所有后代进程。
+#   功能：根据 PID 文件停止指定服务。
 #   参数：
 #     $1 - PID 文件路径
 #     $2 - 服务名称（用于日志）
 #   停止策略：
-#     1. 先收集该 PID 的所有后代进程（pnpm -> node -> Vite 层级）
-#     2. 对后代进程发送 SIGTERM，等待 1 秒，必要时 SIGKILL
-#     3. 对父进程发送 SIGTERM，等待 1 秒，必要时 SIGKILL
+#     1. 发送 SIGTERM（优雅停止，允许进程清理资源）
+#     2. 等待 1 秒
+#     3. 若仍在运行，发送 SIGKILL 强制终止
 #     4. 删除 PID 文件（无论进程是否原本在运行）
-#   说明：Windows 下 kill 若失败，回退到 taskkill。
 stop_pidfile() {
     local pidfile="$1"
     local name="$2"
     if [ -f "$pidfile" ]; then
         local pid
         pid="$(cat "$pidfile")"
-        # 收集所有后代进程 PID，去重；注意排除空值和当前 shell 自身。
-        local descendants
-        descendants="$(collect_descendant_pids "$pid" | sort -u | grep -v '^$' || true)"
-
-        if is_alive "$pid" || [ -n "$descendants" ]; then
-            echo "停止 ${name}（pid ${pid}${descendants:+, descendants: $descendants}）..."
-
-            # 先优雅停止后代进程，避免父进程被杀后子进程成为孤儿继续占用端口。
-            if [ -n "$descendants" ]; then
-                kill_pids -TERM $descendants
-                sleep 1
-                # 对仍然存活的后代进程强制终止
-                local still_alive
-                still_alive="$(for d in $descendants; do is_alive "$d" && echo "$d"; done | tr '\n' ' ')"
-                if [ -n "$still_alive" ]; then
-                    kill_pids -KILL $still_alive
-                fi
-            fi
-
-            # 再停止父进程
+        if is_alive "$pid"; then
+            echo "停止 ${name}（pid ${pid}）..."
+            # kill 默认发送 SIGTERM（信号 15）
+            kill "$pid" 2>/dev/null || true
+            sleep 1
             if is_alive "$pid"; then
-                # kill 默认发送 SIGTERM（信号 15）
-                if ! kill "$pid" 2>/dev/null; then
-                    if is_windows && command -v taskkill >/dev/null 2>&1; then
-                        taskkill /PID "$pid" /F 2>/dev/null || true
-                    fi
-                fi
-                sleep 1
-                if is_alive "$pid"; then
-                    # SIGKILL（信号 9）强制终止
-                    if ! kill -9 "$pid" 2>/dev/null; then
-                        if is_windows && command -v taskkill >/dev/null 2>&1; then
-                            taskkill /PID "$pid" /F 2>/dev/null || true
-                        fi
-                    fi
-                fi
+                # SIGKILL（信号 9）强制终止
+                kill -9 "$pid" 2>/dev/null || true
             fi
         else
             echo "${name} 未在运行"

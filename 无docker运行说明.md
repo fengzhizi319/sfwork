@@ -2,6 +2,8 @@
 
 本文档说明如何在不使用 Docker 的前提下，直接基于 `sfwork` 目录下的本地源码运行 SecretPad 前端、SecretPad 后端、Kuscia 以及 SecretFlow。该方式适用于本地二次开发和源码调试。
 
+> **平台说明**：该流程需要 Bash、sudo、conda 以及 Linux 风格的进程/端口管理能力；Windows 用户请在 **WSL2（推荐 Ubuntu）** 中运行，不支持直接在 PowerShell / cmd.exe 中执行。
+
 > **注意**：
 > - 本方案不使用任何 Docker 镜像来运行 Kuscia / SecretPad / SecretFlow。
 > - SecretFlow 通过 conda 环境 `sf310` 以可编辑模式（`pip install -e .`）安装本地源码。
@@ -33,8 +35,11 @@
 | openssl | 任意 | 证书生成 |
 | conda（Miniconda/Anaconda） | 任意 | 管理 SecretFlow Python 环境 `sf310` |
 | sudo | 可用 | Kuscia Master 需要监听 53 / 80 等特权端口 |
+| Windows | 仅通过 WSL2 Bash 环境 | 不支持原生 PowerShell / cmd.exe 直接执行 |
 
 **不需要 Docker。**
+
+如果你是 Windows 用户，请先进入 WSL2 里的 Ubuntu 终端，再运行本章命令；以下示例中的 `/home/charles/code/sfwork` 也应替换为你在 WSL2 中的实际工作区路径。
 
 验证命令：
 

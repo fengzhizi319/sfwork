@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-ROOT = Path('/home/charles/code/sfwork/docs/doc-center')
+ROOT = Path(__file__).resolve().parent.parent / 'docs' / 'doc-center'
 
 # Category metadata: directory name -> (title, description, source descriptions)
 CATEGORIES = {
