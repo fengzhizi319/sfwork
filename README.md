@@ -73,7 +73,7 @@ sfwork/
 ```text
 secretflow/     # 隐私计算框架（Python，含 MPC/HEU/SPU/TEE/FL 能力）
 kuscia/         # 联邦学习编排引擎（Go，基于 Kubernetes CRD）
-secretpad/      # Web 管理控制台（Java Spring Boot 后端 + React/Vite 前端 secretpad/web/）
+secretpad/      # Web 管理控制台（Java Spring Boot 后端 + 前端 secretpad/frontend-src/，独立仓库）
 ```
 
 ### 配套本地隐私 SDK（独立仓库，与 sfwork 同级目录）
@@ -239,14 +239,14 @@ make image                     # 构建 Docker 镜像
 ### SecretPad Frontend
 
 ```bash
-cd secretpad/web
+cd secretpad/frontend-src
 corepack pnpm install                 # 安装依赖
-pnpm --filter @secretpad/app build    # 构建生产包
-pnpm --filter @secretpad/app dev      # 启动开发服务器（http://localhost:8000）
-pnpm --filter @secretpad/app test     # 运行测试
+pnpm --filter secretpad build         # 构建生产包（apps/platform）
+pnpm --filter secretpad dev           # 启动开发服务器（http://localhost:8000）
+pnpm --filter secretpad test          # 运行测试
 ```
 
-> 旧前端 `secretpad/frontend-src/` 与 `secretpad-frontend/` 已弃用，请统一使用 `secretpad/web/`。
+> 前端为独立仓库 `secretpad-frontend`（克隆到 `secretpad/frontend-src/`，实际应用为 `apps/platform`）；旧的 Vite 前端 `secretpad/web/` 已移除。
 
 完整命令参考见 [AGENTS.md §4](./AGENTS.md#4-build--test-commands)。
 
@@ -322,7 +322,7 @@ AI 助手会自动加载这些技能以提供准确的项目级指导。
    - 无 Docker 全量启动：`bash scripts/run-all-no-docker.sh`
    - Docker Kuscia + 本地后端/前端：`bash scripts/dev-start.sh`
 3. **修改后端代码**：`cd secretpad && mvn clean install -Dmaven.test.skip=true`，重启后端
-4. **修改前端代码**：`cd secretpad/web && corepack pnpm --filter @secretpad/app dev` 支持热重载
+4. **修改前端代码**：`cd secretpad/frontend-src && corepack pnpm --filter secretpad dev` 支持热重载
 5. **修改 Kuscia 代码**：`cd kuscia && bash hack/build.sh -t kuscia`，重启 Kuscia Master
 6. **提交前运行测试**：在对应子项目中执行测试
 7. **查看日志**：`logs/kuscia-master.log`、`logs/backend.log`、`logs/frontend.log` 及各项目专属日志目录

@@ -18,9 +18,9 @@ This guide describes the `sfwork` workspace for AI coding agents. The workspace 
 | **Kuscia** | Go | Kubernetes-based orchestration engine for federated learning jobs | `kuscia/` |
 | **SecretFlow** | Python | Privacy-preserving computation framework (MPC, HEU, SPU, TEE, FL) | `secretflow/` |
 | **SecretPad** | Java (Spring Boot) | Web management console backend | `secretpad/` |
-| **SecretPad Frontend** | TypeScript / React | Web management console UI | `secretpad/web/` |
+| **SecretPad Frontend** | TypeScript / React | Web management console UI | `secretpad/frontend-src/` |
 
-There is also a legacy copy of the frontend at `secretpad/frontend-src/` and `secretpad-frontend/`, but it has been deprecated and removed; active development happens in `secretpad/web/`.
+The frontend is an independent repository (`secretpad-frontend`) cloned into `secretpad/frontend-src/`; the active app is `apps/platform` (package name `secretpad`, built with umi). The previous Vite frontend at `secretpad/web/` has been deprecated and removed.
 
 ### 1.1 Local Privacy SDKs / Agent
 
@@ -93,8 +93,8 @@ The detailed whitepaper and presentation are in `docs/doc-center/00-项目总览
 ├── logs/                         # aggregated logs from run-all-no-docker.sh
 ├── kuscia/                       # Go orchestration engine
 ├── secretflow/                   # Python privacy-preserving ML framework
-├── secretpad/                    # Java backend + web frontend
-├── secretpad-frontend/           # deprecated legacy frontend copy (removed)
+├── secretpad/                    # Java backend (frontend cloned to secretpad/frontend-src/)
+├── secretpad/frontend-src/       # SecretPad frontend (independent repo secretpad-frontend, umi)
 ├── privacy-java-sdk/             # Java local privacy SDK
 ├── privacy-go-sdk/               # Go local privacy SDK
 └── privacy-local-agent/          # Python REST/gRPC privacy agent
@@ -129,13 +129,12 @@ The detailed whitepaper and presentation are in `docs/doc-center/00-项目总览
 - Quartz scheduling, Ehcache 3
 - Maven multi-module project
 
-### SecretPad Frontend (`secretpad/web/`)
-- **Node.js >= 18.0.0**, **pnpm >= 8.8.0** (managed by `packageManager` field, currently `pnpm@11.7.0`)
-- **React 18**, **Vite 5**, **Tailwind CSS**
-- **TypeScript 5.x**
-- **Zustand** for state management
-- pnpm workspace monorepo
-- Vitest + React Testing Library
+### SecretPad Frontend (`secretpad/frontend-src/`)
+- **Node.js >= 16.14.0**, **pnpm 8.8.0** (managed by `packageManager` field)
+- **umi 4.x** (React 18), **Ant Design 5**, **TypeScript**
+- **Valtio** for state management (via `src/util/valtio-helper.ts`)
+- **Nx** + pnpm workspace monorepo; active app is `apps/platform` (package name `secretpad`)
+- Jest + React Testing Library
 
 ---
 
@@ -220,19 +219,16 @@ make pack platform="linux/amd64"
 ### 4.4 SecretPad Frontend
 
 ```bash
-cd /home/charles/code/sfwork/secretpad/web
+cd /home/charles/code/sfwork/secretpad/frontend-src
 
 # Install dependencies
 corepack pnpm install
 
-# Dev server (http://localhost:8000)
-corepack pnpm --filter @secretpad/app dev
+# Dev server (http://localhost:8000), active app is apps/platform (package name secretpad)
+corepack pnpm --filter secretpad dev
 
-# Build all packages and the main app
+# Build all packages and the main app (nx run-many --target=build)
 corepack pnpm run build
-
-# Typecheck
-corepack pnpm run typecheck
 
 # Test
 corepack pnpm test
@@ -297,17 +293,16 @@ Multi-module Maven project under `org.secretflow.secretpad.*`:
 
 REST controllers live under `/api/v1alpha1/`. Config YAMLs are at `config/` (not under `src/main/resources`).
 
-### SecretPad Frontend (`secretpad/web/`)
-pnpm workspace monorepo:
+### SecretPad Frontend (`secretpad/frontend-src/`)
+Nx + pnpm workspace monorepo:
 
 | Directory | Purpose |
 |---|---|
-| `apps/secretpad/` | Main SecretPad web app (Vite 5 + React 18) |
-| `packages/design-system/` | `@secretpad/design-system` component library |
-| `packages/api-client/` | `@secretpad/api-client` API schemas and mock client |
-| `packages/dag-next/` | `@secretpad/dag-next` DAG canvas engine |
-| `packages/utils/` | `@secretpad/utils` shared utilities |
-| `tooling/tsconfig/` | Shared TypeScript configs |
+| `apps/platform/` | Main SecretPad web app (umi 4 + React 18 + Ant Design, package name `secretpad`) |
+| `apps/docs/` | Documentation site |
+| `packages/dag/` | `@secretflow/dag` DAG canvas engine |
+| `packages/utils/` | `@secretflow/utils` shared utilities |
+| `tooling/` | Shared eslint / jest / stylelint / tsconfig / tsup configs |
 
 ---
 
@@ -495,9 +490,9 @@ java -Dspring.profiles.active=dev \
      -jar target/secretpad.jar
 
 # 7. Start SecretPad frontend
-cd /home/charles/code/sfwork/secretpad/web
+cd /home/charles/code/sfwork/secretpad/frontend-src
 corepack pnpm install
-corepack pnpm --filter @secretpad/app dev
+corepack pnpm --filter secretpad dev
 ```
 
 Stop everything with `bash /home/charles/code/sfwork/scripts/run-all-no-docker.sh --stop`.
@@ -535,7 +530,7 @@ When modifying code, understand which layer owns the contract:
    - Non-Docker all-in-one: `bash scripts1/run-all-no-docker.sh`
    - Docker Kuscia + local backend/frontend: `bash scripts1/dev-start.sh`
 3. **Make backend changes**: `cd secretpad && mvn clean install -Dmaven.test.skip=true`, restart backend.
-4. **Make frontend changes**: `cd secretpad/web && corepack pnpm --filter @secretpad/app dev` supports hot reload.
+4. **Make frontend changes**: `cd secretpad/frontend-src && corepack pnpm --filter secretpad dev` supports hot reload.
 5. **Make Kuscia changes**: `cd kuscia && bash hack/build.sh -t kuscia`, then restart Kuscia Master.
 6. **Run tests** in the relevant subproject before committing.
 7. **Check logs**: `logs/kuscia-master.log`, `logs/backend.log`, `logs/frontend.log`, plus per-project log directories.
@@ -553,9 +548,9 @@ When modifying code, understand which layer owns the contract:
 | Build SecretPad jar | `cd secretpad && mvn clean package -DskipTests` |
 | Test SecretPad | `cd secretpad && mvn clean test` |
 | Build SecretPad image | `cd secretpad && make image` |
-| Install frontend deps | `cd secretpad/web && corepack pnpm install` |
-| Dev frontend | `cd secretpad/web && corepack pnpm --filter @secretpad/app dev` |
-| Test frontend | `cd secretpad/web && corepack pnpm test` |
+| Install frontend deps | `cd secretpad/frontend-src && corepack pnpm install` |
+| Dev frontend | `cd secretpad/frontend-src && corepack pnpm --filter secretpad dev` |
+| Test frontend | `cd secretpad/frontend-src && corepack pnpm test` |
 | Run all locally (non-Docker) | `bash /home/charles/code/sfwork/scripts1/run-all-no-docker.sh` |
 | Stop all locally (non-Docker) | `bash /home/charles/code/sfwork/scripts1/run-all-no-docker.sh --stop` |
 | Start with Docker Kuscia | `bash /home/charles/code/sfwork/scripts1/dev-start.sh` |

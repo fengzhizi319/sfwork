@@ -1,5 +1,82 @@
 ---
 name: secretpad-frontend-dev
+description: Develop the SecretPad frontend. Use when the user asks about frontend code changes, UI components, pages, DAG canvas, theming, build, lint, tests, or frontend-backend integration. The active frontend is the independent repo secretpad-frontend cloned at secretpad/frontend-src/ (umi 4 + Ant Design app at apps/platform); the old Vite frontend at secretpad/web/ has been removed.
+---
+
+# SecretPad Frontend Development
+
+The active frontend is the independent repository `secretpad-frontend`, cloned into `secretpad/frontend-src/`. The real application is `apps/platform` (package name `secretpad`, built with umi). The previous Vite frontend at `secretpad/web/` has been deprecated and removed.
+
+## Stack
+
+- Node.js >= 16.14.0, pnpm 8.8.0 (managed by `packageManager`)
+- umi 4.x (React 18), Ant Design 5
+- TypeScript
+- Valtio for state management (via `src/util/valtio-helper.ts`)
+- Nx + pnpm workspace monorepo
+- Jest + React Testing Library
+
+## Project Structure
+
+```
+secretpad/frontend-src/
+├── apps/
+│   ├── platform/               # Main SecretPad web app (umi 4 + React 18 + Ant Design, package name `secretpad`)
+│   └── docs/                   # Documentation site
+├── packages/
+│   ├── dag/                    # @secretflow/dag DAG canvas engine
+│   └── utils/                  # @secretflow/utils shared utilities
+└── tooling/                    # Shared eslint / jest / stylelint / tsconfig / tsup configs
+```
+
+## Key Commands
+
+```bash
+cd secretpad/frontend-src
+
+# Install dependencies
+corepack pnpm install
+
+# Dev server (http://localhost:8000), active app is apps/platform (package name secretpad)
+corepack pnpm --filter secretpad dev
+
+# Build all packages and the main app (nx run-many --target=build)
+corepack pnpm run build
+
+# Test
+corepack pnpm test
+
+# Lint / format
+corepack pnpm run lint
+```
+
+## Conventions
+
+- Prettier: printWidth 88, singleQuote, trailingComma all
+- State management: Valtio via `src/util/valtio-helper.ts` (`Model` / `getModel` / `useModel`)
+- REST API: OpenAPI-generated client under `src/services/secretpad/`
+- Routing: umi routes in `config/routes.ts`, with `@/wrappers/*` for auth/theme
+- Feature code lives in `src/modules/<feature>/` following a `*.view.tsx` + `*-service.ts` pattern
+- Conventional Commits enforced by Husky/commitlint; lint-staged runs prettier/stylelint/eslint on commit
+
+## Common Workflows
+
+1. **Add a page**: Create the page component under `apps/platform/src/pages/`, register it in `apps/platform/config/routes.ts` (with the appropriate `@/wrappers/*`).
+2. **Add/modify a feature**: Work in `apps/platform/src/modules/<feature>/` — a `*.view.tsx` for the UI plus a `*-service.ts` (Valtio model) for state and API calls.
+3. **DAG changes**: `packages/dag/src/` (the `@secretflow/dag` canvas engine), consumed by `src/modules/main-dag/`.
+4. **Backend API change**: Update `config/openapi.config.js` and regenerate the client with `corepack pnpm --filter secretpad openapi`, keeping `src/services/secretpad/` in sync.
+
+## Important Paths
+
+- Main app: `apps/platform/src/`
+- Routes: `apps/platform/config/routes.ts`
+- Pages: `apps/platform/src/pages/`
+- Feature modules: `apps/platform/src/modules/`
+- API client: `apps/platform/src/services/secretpad/`
+- Valtio helper: `apps/platform/src/util/valtio-helper.ts`
+- DAG engine: `packages/dag/src/`
+---
+name: secretpad-frontend-dev
 description: Develop the SecretPad frontend. Use when the user asks about frontend code changes, UI components, pages, DAG canvas, theming, build, lint, tests, or frontend-backend integration. The active frontend lives in secretpad/web/; secretpad/frontend-src and secretpad-frontend are legacy copies that have been removed/deprecated.
 ---
 
