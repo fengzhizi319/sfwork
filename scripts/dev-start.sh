@@ -705,6 +705,9 @@ reset_kuscia() {
 #   等待端口:
 #     - 18083: Kuscia API gRPC(SecretPad 后端连接)
 #     - 13081: Kuscia Envoy 内部端口(数据面通信)
+#   端口回退:
+#     若 master 容器由旧版脚本创建,可能缺少 -p 13081:80 映射.
+#     此时自动回退到 gateway 端口 18080(始终映射),并提示用户 --reset-kuscia 修复.
 start_kuscia() {
     log_step "检查 Kuscia Docker 环境 ..."
 
@@ -732,7 +735,23 @@ start_kuscia() {
 
     # Kuscia 启动较慢,设置 180 秒超时
     wait_for_port 127.0.0.1 18083 180 "Kuscia API gRPC"
-    wait_for_port 127.0.0.1 13081 180 "Kuscia Envoy 内部端口"
+
+    # Envoy 内部端口检测:旧版部署脚本创建的 master 容器可能缺少 -p 13081:80 映射,
+    # 此时容器内 Envoy 仍在监听 80,但宿主机无法访问.
+    # 回退策略:使用 gateway 端口 18080(->1080)作为 KUSCIA_GW_ADDRESS.
+    if wait_for_port 127.0.0.1 13081 30 "Kuscia Envoy 内部端口" 2>/dev/null; then
+        KUSCIA_GW_PORT=13081
+    else
+        log_warn "端口 13081 不可用(master 容器可能由旧版脚本创建,缺少 -p 13081:80 映射)"
+        log_warn "回退使用 gateway 端口 18080 作为 KUSCIA_GW_ADDRESS"
+        log_warn "如需彻底修复,请执行:bash scripts/dev-start.sh --reset-kuscia"
+        if ! port_in_use 18080; then
+            log_error "Gateway 端口 18080 也不可用,Kuscia 部署异常,请检查容器日志"
+            log_error "  docker logs --tail 100 ${USER}-kuscia-master"
+            exit 1
+        fi
+        KUSCIA_GW_PORT=18080
+    fi
 }
 
 # import_custom_image_to_lite
@@ -826,7 +845,8 @@ start_backend() {
 
     export KUSCIA_API_ADDRESS=127.0.0.1
     export KUSCIA_API_PORT=18083
-    export KUSCIA_GW_ADDRESS=127.0.0.1:13081
+    # KUSCIA_GW_PORT 由 start_kuscia 设置:优先 13081(Envoy 内部端口),回退 18080(Gateway)
+    export KUSCIA_GW_ADDRESS="127.0.0.1:${KUSCIA_GW_PORT:-13081}"
     export KUSCIA_PROTOCOL=notls
 
     # Kuscia Docker 模式将节点数据目录挂载到宿主机 $HOME/kuscia/master/data/{nodeId}

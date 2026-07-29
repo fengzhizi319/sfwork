@@ -26,6 +26,7 @@
   - [案例：K-匿名本地测试 "no tests ran"（pytest --env 过滤）](#案例k-匿名本地测试-no-tests-ranpytest-env-过滤)
   - [案例：前端 K-匿名流水线运行失败（QI 列与数据不匹配）](#案例前端-k-匿名流水线运行失败qi-列与数据不匹配)
   - [案例：DAG 页面因 projectId 为空报入参校验失败](#案例dag-页面因-projectid-为空报入参校验失败)
+  - [案例：dev-start.sh 启动失败（Kuscia Envoy 端口 13081 未就绪）](#案例dev-startsh-启动失败kuscia-envoy-端口-13081-未就绪)
 - [5. 常用命令速查表](#5-常用命令速查表)
 - [6. 调试建议与最佳实践](#6-调试建议与最佳实践)
 - [7. 扩展：新增一个算法组件的端到端 checklist](#7-扩展新增一个算法组件的端到端-checklist)
@@ -1124,6 +1125,167 @@ if (!projectId) {
 - 从 URL query 读取的参数（如 `projectId`）在调用后端前**必须做空值检查**，否则直接访问页面会发出非法请求，触发后端 `@NotBlank` 校验。
 - SecretPad 后端校验失败时返回 HTTP 200 但 `status.code != 0`，排查时不能只看 HTTP 状态码，需结合响应体与后端日志。
 - 8000 端口实际运行的前端是旧版 `secretpad/frontend-src`（umi），排查 DAG 页面问题时先确认生效的是哪个前端。
+
+---
+
+### 案例：dev-start.sh 启动失败（Kuscia Envoy 端口 13081 未就绪）
+
+**现象**：执行 `bash scripts/dev-start.sh` 时，Kuscia API gRPC（18083）正常就绪，但随后报错：
+
+```text
+[INFO] 等待 Kuscia Envoy 内部端口 就绪：127.0.0.1:13081（最多 180s）...
+[ERROR] Kuscia Envoy 内部端口 在 127.0.0.1:13081 上未就绪,请查看日志
+```
+
+脚本退出，后端和前端均未启动。
+
+**定位步骤**：
+
+1. 确认 Kuscia master 容器正在运行：
+
+   ```bash
+   docker ps --filter name=kuscia-master
+   # charles-kuscia-master  Up 12 minutes  0.0.0.0:18080->1080/tcp, 0.0.0.0:18082->8082/tcp, 0.0.0.0:18083->8083/tcp
+   ```
+
+2. 检查宿主机端口映射，发现 **没有 `13081->80` 的映射**：
+
+   ```bash
+   docker port ${USER}-kuscia-master
+   # 1080/tcp -> 0.0.0.0:18080
+   # 8082/tcp -> 0.0.0.0:18082
+   # 8083/tcp -> 0.0.0.0:18083
+   # ← 缺少 80/tcp -> 0.0.0.0:13081
+   ```
+
+3. 进入容器确认 Envoy 端口 80 实际在监听：
+
+   ```bash
+   docker exec ${USER}-kuscia-master ss -tln | grep ':80 '
+   # LISTEN 0 4096 0.0.0.0:80 0.0.0.0:*
+   ```
+
+4. **结论**：容器内部 Envoy 正常监听 80，但 Docker 创建容器时未包含 `-p 13081:80` 映射。
+   这是因为容器由旧版部署脚本创建，而 `docker start` 不会更新已有容器的端口映射。
+   `install-kuscia-only.sh` 的 `ensure_master()` 发现容器已存在时只执行 `docker start`，
+   不会重建容器，因此旧的不完整端口映射被保留。
+
+**根因**：
+
+Kuscia 的 `kuscia.sh` 部署脚本在 `start_container()` 中会映射 5 个端口：
+
+```bash
+local export_port="-p ${domain_host_internal_port}:80 \
+  -p ${domain_host_port}:1080 \
+  -p ${kusciaapi_http_port}:8082 \
+  -p ${kusciaapi_grpc_port}:8083 \
+  -p ${metrics_port}:9091"
+```
+
+但如果容器是在此逻辑完善之前创建的，就不会有 `13081:80` 映射。
+Docker 不支持对已创建容器修改端口映射，只有删除重建才能修复。
+
+**修复方案**：
+
+- **方案 A（推荐，彻底修复）**：重置 Kuscia 环境，强制重建容器：
+
+  ```bash
+  bash scripts/dev-start.sh --reset-kuscia
+  ```
+
+  这会删除旧的 master/alice/bob 容器及数据目录，重新部署时会自动包含正确的端口映射。
+
+  **reset 后必查（2026-07-29 实际执行时踩到的坑）**：
+
+  1. **AppImage 可能未注册**：如果 `secretpad/charles-kuscia-*/` 工作目录是 root 所有
+     （历史遗留，例如之前用 sudo 跑过部署脚本），`kuscia.sh` 复制 `register_app_image.sh`
+     时会 `Permission denied`，AppImage CRD 不会创建，之后提交任务会报 appimage 不存在。
+     检查并手动补注册：
+
+     ```bash
+     docker exec ${USER}-kuscia-master kubectl get appimages
+     # 若为空（No resources found），手动注册（-m 表示在 master 上创建 AppImage CRD）：
+     docker exec -i ${USER}-kuscia-master scripts/deploy/register_app_image.sh \
+       -i secretflow/sf-privacy-dev:1.15.0.dev-privacy -m
+     # 应看到 appimage.kuscia.secretflow/secretflow-image created
+     ```
+
+     根治办法是把 root 所有的历史工作目录改回当前用户（或直接删除）：
+
+     ```bash
+     sudo chown -R $USER:$USER secretpad/charles-kuscia-*/
+     ```
+
+  2. **示例数据只恢复默认四张表**：reset 后只有 `alice-table` / `bob-table` /
+     `alice-dp-table` / `bob-dp-table`；隐私流水线使用的 `alice-privacy-table` /
+     `bob-privacy-table` 需要重新注册（部署日志中会出现
+     `create_domaindata_alice_privacy_table.sh: no such file or directory`）。
+  3. **自定义镜像不受影响**：`dev-start.sh` 的 `import_custom_image_to_kuscia` 通过
+     `docker save | kuscia image load` 直传镜像，不受上述权限问题影响，可用
+     `docker exec ${USER}-kuscia-lite-alice kuscia image list` 确认。
+
+- **方案 B（自动回退，已内置）**：`dev-start.sh` 已增加端口回退逻辑：
+  当 13081 不可用时，自动回退使用 gateway 端口 18080（`-p 18080:1080`，始终存在）
+  作为 `KUSCIA_GW_ADDRESS`，脚本不再因此中断：
+
+  ```text
+  [WARN] 端口 13081 不可用(master 容器可能由旧版脚本创建,缺少 -p 13081:80 映射)
+  [WARN] 回退使用 gateway 端口 18080 作为 KUSCIA_GW_ADDRESS
+  [WARN] 如需彻底修复,请执行:bash scripts/dev-start.sh --reset-kuscia
+  ```
+
+  回退模式下后端使用 `KUSCIA_GW_ADDRESS=127.0.0.1:18080`，
+  通过 master 的 Envoy gateway（1080）路由到 Lite 节点，功能正常。
+
+- **方案 C（手动修复，不重置数据）**：手动删除并重建 master 容器：
+
+  ```bash
+  # 停止并删除旧容器
+  docker rm -f ${USER}-kuscia-master
+
+  # 重新部署（会重建容器，保留 Lite 节点）
+  cd /home/charles/code/sfwork/secretpad
+  bash scripts/install-kuscia-only.sh master -P notls
+
+  # 验证端口映射
+  docker port ${USER}-kuscia-master
+  # 应看到: 80/tcp -> 0.0.0.0:13081
+  ```
+
+  > **前提**：master 的数据目录已持久化挂载到宿主机（新版部署布局 `~/kuscia/master`），
+  > 这样重建容器后 domain 注册信息仍在，Lite 节点能直接重连。
+  > 可用 `docker inspect -f '{{json .Mounts}}' ${USER}-kuscia-master` 确认：
+  > 如果旧容器只挂载了 `kuscia.yaml`（本次出问题的容器即是如此），
+  > 重建 master 会丢失全部 domain 注册，alice/bob 会变成孤儿节点，
+  > 此时应直接使用方案 A 整体重置。
+
+**验证**：
+
+```bash
+# 确认端口映射正确
+docker port ${USER}-kuscia-master | grep 13081
+# 80/tcp -> 0.0.0.0:13081
+
+# 确认宿主机可访问
+ss -tln | grep 13081
+# LISTEN 0 4096 0.0.0.0:13081 0.0.0.0:*
+
+# 重新启动开发环境
+bash scripts/dev-start.sh
+# [INFO] Kuscia Envoy 内部端口 已就绪
+```
+
+**经验总结**：
+
+- Docker 容器的端口映射在 `docker run` 时确定，**`docker start` 不会更新端口映射**。
+  如果部署脚本更新了端口配置，必须删除旧容器重建才能生效。
+- `install-kuscia-only.sh` 的 `ensure_master()` / `ensure_lite()` 采用"存在即启动"策略，
+  适合日常快速重启，但不会修复历史遗留的端口映射问题。
+- 遇到"端口未就绪"但容器内服务正常时，首先检查 `docker port <容器名>` 确认映射是否存在。
+- `dev-start.sh` 现已内置回退逻辑：13081 不可用时自动使用 18080（gateway），
+  不再阻塞启动流程。但建议有空时执行 `--reset-kuscia` 彻底修复。
+- `--reset-kuscia` 之后按方案 A 中的"reset 后必查"清单确认三件事：AppImage 已注册、
+  domaindata 已恢复、自定义镜像已导入 Lite，否则任务会在创建/调度阶段才报错。
 
 ---
 
