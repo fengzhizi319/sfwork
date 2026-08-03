@@ -16,6 +16,8 @@
 /privacy-go-sdk/
 /privacy-local-agent/
 
+#nerlora
+/nerlora/
 # 已移除的子项目
 /secretflowpad-go/
 
